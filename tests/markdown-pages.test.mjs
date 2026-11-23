@@ -66,3 +66,15 @@ test('isSafePath accepts nested relative paths only', () => {
 	good.forEach((p) => assert.equal(isSafePath(p), true, p));
 	bad.forEach((p) => assert.equal(isSafePath(p), false, p));
 });
+
+test('isSafeHeadingId keeps generated heading ids except reserved library globals', () => {
+	const { isSafeHeadingId } = sandbox.MarkdownPages;
+	// ids DOMPurify would drop as document properties, but safe on headings
+	['fonts', 'attributes', 'forms', 'location', 'name', 'top', 'quick-start', 'v1_2'].forEach((id) => {
+		assert.equal(isSafeHeadingId(id), true, id);
+	});
+	// reserved globals and unusual values
+	['hljs', 'HLJS', 'showdown', 'DOMPurify', 'markdownpages', '', '-x', 'a b', 'a"b', 'x'.repeat(101), null].forEach((id) => {
+		assert.equal(isSafeHeadingId(id), false, String(id));
+	});
+});

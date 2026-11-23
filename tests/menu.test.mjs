@@ -105,3 +105,12 @@ test('ids are derived from titles without leading or trailing dashes', () => {
 	assert.equal(result.main[0].id, 'ber-uns');
 	assert.equal(result.main[1].id, 'x');
 });
+
+test('menuItemsFor "tree" returns the whole menu including children', () => {
+	// Act
+	const tree = plain(menuItemsFor(menu, 'tree', 'README.md'));
+
+	// Assert
+	assert.deepEqual(tree.map((i) => i.title), ['Home', 'Docs', 'Blog']);
+	assert.deepEqual(tree[1].children.map((i) => i.title), ['Install', 'Usage']);
+});

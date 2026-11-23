@@ -106,7 +106,40 @@
 				node.setAttribute('rel', 'noopener noreferrer');
 			}
 		});
+		// DOMPurify drops ids that equal a document property (DOM clobbering
+		// protection), e.g. "## Fonts" -> id="fonts". Anchor links to such
+		// headings would break, so heading ids are kept when they are safe.
+		DOMPurify.addHook('uponSanitizeAttribute', function (node, data) {
+			if (data.attrName !== 'id') {
+				return;
+			}
+			if (RESERVED_IDS.indexOf(String(data.attrValue).toLowerCase()) >= 0) {
+				// never let content shadow the library globals (any element)
+				data.keepAttr = false;
+			} else if (/^H[1-6]$/.test(node.nodeName) && isSafeHeadingId(data.attrValue)) {
+				data.forceKeepAttr = true;
+			}
+		});
 	}
+
+	// globals of markdown-pages.js and the example scripts that are checked
+	// with "if (window.x)" before their script has loaded - an element with
+	// such an id would be found via window named access instead
+	var RESERVED_IDS = ['hljs', 'showdown', 'showdownforms', 'dompurify', 'markdownpages'];
+
+	/**
+	 * A heading id may be kept if it looks like a generated header id and is
+	 * not reserved. Headings are not form/img/embed/object elements, so they
+	 * cannot clobber document properties, and window named access never
+	 * shadows existing window properties (e.g. "location", "name", "top").
+	 */
+	function isSafeHeadingId(id) {
+		return typeof id === 'string'
+			&& /^[a-z0-9][a-z0-9_-]{0,99}$/i.test(id)
+			&& RESERVED_IDS.indexOf(id.toLowerCase()) < 0;
+	}
+
+	MarkdownPages.isSafeHeadingId = isSafeHeadingId;
 
 	function toHtml(markdown) {
 		var converter = new global.showdown.Converter({ extensions: MarkdownPages.extensions });
@@ -170,12 +203,13 @@
 	//
 	// Placeholders (in any Markdown file, also header.md / footer.md):
 	//   {{menu:main}}       top-level items of the main menu
+	//   {{menu:tree}}       the whole menu with all levels (e.g. grouped docs navigation)
 	//   {{menu:sub:<id>}}   children of the main menu item with that id
 	//   {{menu:current}}    children of the main menu item that contains the current page
 
 	MarkdownPages.menuUrl = 'menu.json';
 
-	var PLACEHOLDER = /\{\{\s*menu:(main|current|sub:([A-Za-z0-9_-]+))\s*\}\}/g;
+	var PLACEHOLDER = /\{\{\s*menu:(main|tree|current|sub:([A-Za-z0-9_-]+))\s*\}\}/g;
 	var SAFE_HREF = /^(https?:|mailto:|[^:]*$)/i; // absolute http(s)/mailto, or no scheme at all
 	var MAX_DEPTH = 5;
 
@@ -264,10 +298,10 @@
 
 	/**
 	 * Returns the list of items to show for a placeholder:
-	 *   "main", "current" or "sub:<id>"
+	 *   "main", "tree", "current" or "sub:<id>"
 	 */
 	function menuItemsFor(menu, kind, currentFile) {
-		if (kind === 'main') {
+		if (kind === 'main' || kind === 'tree') {
 			return menu.main;
 		}
 		var parent = null;
@@ -420,7 +454,7 @@
 				var items = menuItemsFor(menu, kind, currentFile);
 				nav.className = 'mdp-menu mdp-menu-' + kind.split(':')[0];
 				if (!nav.hasAttribute('aria-label')) {
-					nav.setAttribute('aria-label', kind === 'main' ? 'Main menu' : 'Submenu');
+					nav.setAttribute('aria-label', kind === 'main' || kind === 'tree' ? 'Main menu' : 'Submenu');
 				}
 				nav.textContent = '';
 				if (items.length) {

@@ -17,7 +17,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `.github/workflows/codeql.yml` — CodeQL analysis for JavaScript and workflows
 - `.github/workflows/ci.yml`, `tests/` — unit tests for page resolution (`npm test`)
 - `menu.json` — navigation defined as JSON, inserted with the placeholders
-  `{{menu:main}}`, `{{menu:sub:<id>}}` and `{{menu:current}}`;
+  `{{menu:main}}`, `{{menu:tree}}` (all levels), `{{menu:sub:<id>}}` and `{{menu:current}}`;
   documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`;
   `menu.json` is optional – if it is missing or invalid, the hand-written
   navigation marked with `data-mdp-menu-fallback` is used as before
@@ -47,7 +47,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   page paths are restricted to relative paths without `..`, hidden files or URL schemes,
   and every fetch must stay on the same origin
 - `markdown-pages.js` — generated HTML is sanitized with DOMPurify 3.5.0 (new vendored library)
-  before it is inserted; links with `target` get `rel="noopener noreferrer"`
+  before it is inserted; links with `target` get `rel="noopener noreferrer"`;
+  heading ids are kept even if they match a document property (`## Fonts` → `#fonts`),
+  ids of library globals (`hljs`, `showdown`, …) are removed from all elements
 - `index.html` — Content Security Policy and referrer policy added
 - `assets/user-scripts.js` — dark/light toggle uses an event listener instead of inline `onclick`
   (inline handlers are removed by the sanitizer and blocked by the CSP)
