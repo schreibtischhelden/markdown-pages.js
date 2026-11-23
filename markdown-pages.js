@@ -157,7 +157,8 @@
 
 	function parseFormAttributes(text) {
 		var attrs = {};
-		text.replace(/(\w+)\s*=\s*"([^"]*)"/g, function (match, key, value) {
+		// fixed keywords instead of (\w+) keep the regex linear (CodeQL js/polynomial-redos)
+		text.replace(/\b(action|method)\s?=\s?"([^"]*)"/gi, function (match, key, value) {
 			attrs[key.toLowerCase()] = value.trim();
 			return match;
 		});
@@ -251,13 +252,28 @@
 			if (!line) {
 				return;
 			}
-			var submit = /^\[\[\s*(.+?)\s*\]\]$/.exec(line);
-			if (submit) {
-				html += '<button type="submit">' + escapeHtml(submit[1]) + '</button>';
-				return;
+			// string operations instead of regexes with nested whitespace
+			// quantifiers keep parsing linear (CodeQL js/polynomial-redos)
+			if (line.length > 4 && line.slice(0, 2) === '[[' && line.slice(-2) === ']]') {
+				var buttonText = line.slice(2, -2).trim();
+				if (buttonText) {
+					html += '<button type="submit">' + escapeHtml(buttonText) + '</button>';
+					return;
+				}
 			}
-			var field = /^([^=]+?)\s*(\*)?\s*=\s*(.+)$/.exec(line);
-			var rendered = field && renderField(field[1], !!field[2], field[3].trim(), formId, index);
+			var rendered = null;
+			var separator = line.indexOf('=');
+			if (separator > 0) {
+				var label = line.slice(0, separator).trim();
+				var required = label.slice(-1) === '*';
+				if (required) {
+					label = label.slice(0, -1).trim();
+				}
+				var value = line.slice(separator + 1).trim();
+				if (label && value) {
+					rendered = renderField(label, required, value, formId, index);
+				}
+			}
 			// anything else is shown as plain (escaped) text
 			html += rendered !== null && rendered !== undefined ? rendered : '<p>' + escapeHtml(line) + '</p>';
 		});

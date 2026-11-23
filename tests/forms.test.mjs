@@ -48,7 +48,7 @@ test('escapes labels, options and unknown lines', () => {
 	].join('\n'));
 
 	// Assert
-	assert.doesNotMatch(html, /<script|<svg|<img|<b>/);
+	assert.doesNotMatch(html, /<script|<svg|<img|<b>/i);
 	assert.match(html, /Na&lt;b&gt;me/);
 	assert.match(html, /value="a&quot;&gt;&lt;script&gt;/);
 });
