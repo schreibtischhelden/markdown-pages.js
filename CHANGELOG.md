@@ -18,6 +18,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`;
   `menu.json` is optional – if it is missing or invalid, the hand-written
   navigation marked with `data-mdp-menu-fallback` is used as before
+- Forms in Markdown (`:::form` blocks, syntax inspired by showdown-forms):
+  text/email/… inputs, textarea, radio buttons, checkboxes, select, submit button,
+  required fields; all values HTML-escaped, `action` restricted to relative,
+  `http(s):` and `mailto:` URLs; forms without `action` dispatch `mdp:form-submit`;
+  documented in `pages/forms.md`
 - `markdown-pages.js` — `mdp:rendered` event after each rendered region,
   configurable `MarkdownPages.showdownOptions` and `MarkdownPages.sanitizeConfig`
 

@@ -113,3 +113,16 @@ document.addEventListener('mdp:rendered', function (event) {
 
 	applyMode(getMode());
 })();
+
+// demo for pages/forms.md: show the values of forms without "action"
+document.addEventListener('mdp:form-submit', function (event) {
+	var output = document.getElementById('form-result');
+	if (!output) {
+		return;
+	}
+	var values = [];
+	event.detail.data.forEach(function (value, key) {
+		values.push(key + ': ' + value);
+	});
+	output.textContent = 'Submitted (not sent anywhere) – ' + values.join(', ');
+});

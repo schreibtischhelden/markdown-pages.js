@@ -121,6 +121,197 @@
 	MarkdownPages.toHtml = toHtml;
 
 	// ---------------------------------------------------------------------
+	// Forms (Showdown extension) - syntax inspired by showdown-forms
+	// ---------------------------------------------------------------------
+	//
+	// :::form action="https://example.com/submit" method="post"
+	// Name* = ___
+	// E-Mail* = ___:email
+	// Message = [___]:5
+	// Contact via = (x) e-mail () phone
+	// Topics = [x] Support [] Sales
+	// Country = {Germany, (Austria), ch -> Switzerland}
+	// [[ Send ]]
+	// :::
+	//
+	// Every value ends up in an attribute or text node and is HTML-escaped.
+	// Without "action" the form is not sent anywhere: submitting dispatches a
+	// "mdp:form-submit" event on the form (detail: { data: FormData }).
+
+	var INPUT_TYPES = ['text', 'email', 'tel', 'number', 'date', 'time', 'url', 'password'];
+	var FORM_BLOCK = /(^|\n)(```|~~~)[^\n]*\n[\s\S]*?\n\2[ \t]*(?=\n|$)|(^|\n):::form([^\n]*)\n([\s\S]*?)\n:::[ \t]*(?=\n|$)/g;
+	var formCounter = 0;
+
+	function escapeHtml(value) {
+		return String(value)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	function fieldName(label) {
+		return label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^\p{L}\p{N}_-]/gu, '') || 'field';
+	}
+
+	function parseFormAttributes(text) {
+		var attrs = {};
+		text.replace(/(\w+)\s*=\s*"([^"]*)"/g, function (match, key, value) {
+			attrs[key.toLowerCase()] = value.trim();
+			return match;
+		});
+		var result = {};
+		if (attrs.action) {
+			var action = attrs.action;
+			if (!/^\/\//.test(action) && !/[\u0000-\u001f\u007f]/.test(action) && SAFE_HREF.test(action)) {
+				result.action = action;
+			}
+		}
+		result.method = /^(get|post)$/i.test(attrs.method || '') ? attrs.method.toLowerCase() : 'post';
+		return result;
+	}
+
+	function renderField(rawLabel, required, value, formId, index) {
+		var label = rawLabel.trim();
+		var name = fieldName(label);
+		var id = formId + '-' + index;
+		var req = required ? ' required' : '';
+		var labelText = escapeHtml(label) + (required ? ' <span aria-hidden="true">*</span>' : '');
+		var match;
+
+		// text input: ___ or ___:email
+		if ((match = /^___(?::([a-z]+))?$/.exec(value))) {
+			var type = INPUT_TYPES.indexOf(match[1]) >= 0 ? match[1] : 'text';
+			return '<label for="' + id + '">' + labelText + '</label>'
+				+ '<input type="' + type + '" id="' + id + '" name="' + escapeHtml(name) + '" data-mdp-name="' + escapeHtml(name) + '"' + req + '>';
+		}
+
+		// textarea: [___] or [___]:5
+		if ((match = /^\[___\](?::(\d{1,2}))?$/.exec(value))) {
+			var rows = match[1] ? Math.max(1, parseInt(match[1], 10)) : 4;
+			return '<label for="' + id + '">' + labelText + '</label>'
+				+ '<textarea id="' + id + '" name="' + escapeHtml(name) + '" data-mdp-name="' + escapeHtml(name) + '" rows="' + rows + '"' + req + '></textarea>';
+		}
+
+		// radio buttons: (x) one () two
+		if (/^\(x?\)/.test(value)) {
+			return renderChoices('radio', /\((x?)\)\s*([^()]+)/g, value, labelText, name, id, req);
+		}
+
+		// checkboxes: [x] one [] two
+		if (/^\[x?\]/.test(value)) {
+			// "required" on every checkbox would force all of them - only mark the group
+			return renderChoices('checkbox', /\[(x?)\]\s*([^[\]]+)/g, value, labelText, name, id, '');
+		}
+
+		// select: {a, (b), value -> Label}
+		if ((match = /^\{(.+)\}$/.exec(value))) {
+			var options = match[1].split(',').map(function (option) {
+				option = option.trim();
+				var selected = /^\(.*\)$/.test(option);
+				if (selected) {
+					option = option.slice(1, -1).trim();
+				}
+				var parts = option.split('->');
+				var optValue = parts[0].trim();
+				var optLabel = (parts.length > 1 ? parts.slice(1).join('->') : parts[0]).trim();
+				return '<option value="' + escapeHtml(optValue) + '"' + (selected ? ' selected' : '') + '>'
+					+ escapeHtml(optLabel) + '</option>';
+			}).join('');
+			return '<label for="' + id + '">' + labelText + '</label>'
+				+ '<select id="' + id + '" name="' + escapeHtml(name) + '" data-mdp-name="' + escapeHtml(name) + '"' + req + '>' + options + '</select>';
+		}
+
+		return null;
+	}
+
+	function renderChoices(type, pattern, value, labelText, name, id, req) {
+		var html = '<fieldset><legend>' + labelText + '</legend>';
+		var i = 0;
+		value.replace(pattern, function (match, checked, text) {
+			var optionId = id + '-' + (i++);
+			var optionText = text.trim();
+			html += '<label for="' + optionId + '">'
+				+ '<input type="' + type + '" id="' + optionId + '" name="' + escapeHtml(name) + '" data-mdp-name="' + escapeHtml(name) + '" value="'
+				+ escapeHtml(optionText) + '"' + (checked ? ' checked' : '') + req + '> '
+				+ escapeHtml(optionText) + '</label>';
+			return match;
+		});
+		return html + '</fieldset>';
+	}
+
+	function renderForm(attrText, body) {
+		var formId = 'mdp-form-' + (++formCounter);
+		var attrs = parseFormAttributes(attrText);
+		var html = '<form id="' + formId + '" method="' + attrs.method + '"'
+			+ (attrs.action ? ' action="' + escapeHtml(attrs.action) + '"' : ' data-mdp-form="local"') + '>';
+		body.split('\n').forEach(function (line, index) {
+			line = line.trim();
+			if (!line) {
+				return;
+			}
+			var submit = /^\[\[\s*(.+?)\s*\]\]$/.exec(line);
+			if (submit) {
+				html += '<button type="submit">' + escapeHtml(submit[1]) + '</button>';
+				return;
+			}
+			var field = /^([^=]+?)\s*(\*)?\s*=\s*(.+)$/.exec(line);
+			var rendered = field && renderField(field[1], !!field[2], field[3].trim(), formId, index);
+			// anything else is shown as plain (escaped) text
+			html += rendered !== null && rendered !== undefined ? rendered : '<p>' + escapeHtml(line) + '</p>';
+		});
+		return html + '</form>';
+	}
+
+	MarkdownPages.formsExtension = {
+		type: 'lang',
+		filter: function (text) {
+			return text.replace(/\r\n?/g, '\n').replace(FORM_BLOCK, function (match, pre1, fence, pre2, attrs, body) {
+				if (fence) {
+					return match; // leave fenced code blocks untouched
+				}
+				return (pre2 || '') + '\n' + renderForm(attrs, body) + '\n\n';
+			});
+		},
+	};
+	MarkdownPages.extensions.push(MarkdownPages.formsExtension);
+	MarkdownPages.renderForm = renderForm;
+
+	/**
+	 * DOMPurify removes name attributes that equal a form/document property
+	 * (e.g. name="name", "action") to prevent DOM clobbering. For fields
+	 * generated by the forms extension the name was derived from the label
+	 * and is restricted to letters, digits, "_" and "-", so it is restored
+	 * from data-mdp-name. Only form fields are affected, which cannot clobber
+	 * document or window properties.
+	 */
+	function restoreFormNames(root) {
+		root.querySelectorAll('form input[data-mdp-name], form textarea[data-mdp-name], form select[data-mdp-name]')
+			.forEach(function (field) {
+				var name = field.getAttribute('data-mdp-name');
+				if (/^[\p{L}\p{N}_-]+$/u.test(name)) {
+					field.setAttribute('name', name);
+				}
+				field.removeAttribute('data-mdp-name');
+			});
+	}
+
+	// forms without action: never navigate away, hand the data to user scripts
+	if (typeof document !== 'undefined') {
+		document.addEventListener('submit', function (event) {
+			var form = event.target;
+			if (form && form.getAttribute && form.getAttribute('data-mdp-form') === 'local') {
+				event.preventDefault();
+				form.dispatchEvent(new CustomEvent('mdp:form-submit', {
+					bubbles: true,
+					detail: { data: new FormData(form) },
+				}));
+			}
+		});
+	}
+
+	// ---------------------------------------------------------------------
 	// Menu (menu.json) - pure part, unit tested
 	// ---------------------------------------------------------------------
 	//
@@ -421,6 +612,7 @@
 			return;
 		}
 		element.innerHTML = toHtml(markdown);
+		restoreFormNames(element);
 		return applyMenus(element).catch(function (error) {
 			console.error('markdown-pages.js: menu', error);
 		}).then(function () {
