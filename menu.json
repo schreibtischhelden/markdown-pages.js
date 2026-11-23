@@ -1,0 +1,14 @@
+{
+	"main": [
+		{ "title": "markdown-pages.js", "href": "." },
+		{ "title": "sample page", "page": "sample-page" },
+		{
+			"title": "features",
+			"id": "features",
+			"page": "features",
+			"children": [
+				{ "title": "menu", "page": "menu" }
+			]
+		}
+	]
+}

@@ -270,3 +270,47 @@ figcaption {
         text-align: center;
     }
 }
+
+/* menus generated from menu.json */
+.mdp-menu-main {
+    justify-content: center;
+}
+
+.mdp-menu-main ul {
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 0 auto;
+}
+
+.mdp-menu-main li {
+    padding-top: 4px;
+    padding-bottom: 4px;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.mdp-menu a {
+    text-decoration: none;
+}
+
+.mdp-menu a[aria-current="page"], .mdp-menu .mdp-menu-item-active > a {
+    font-weight: 700;
+}
+
+/* submenus are vertical lists */
+.mdp-menu-sub, .mdp-menu-current {
+    display: block;
+    margin-bottom: var(--pico-spacing);
+}
+
+.mdp-menu-sub ul, .mdp-menu-current ul {
+    display: block;
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.mdp-menu-sub li, .mdp-menu-current li {
+    display: list-item;
+    list-style: disc;
+    padding: 0;
+}
