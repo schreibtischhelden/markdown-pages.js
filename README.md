@@ -13,6 +13,7 @@ Use **markdown-pages.js** to create simple websites using [Markdown](https://www
 - [Markdown Options](#markdown-options)
 - [Deployment](#deployment)
 - [User Styles & Scripts](#user-styles--scripts)
+- [Third-Party Libraries](#third-party-libraries)
 - [Limitations](#limitations)
 
 ## Quick Start
@@ -71,6 +72,25 @@ The library can be used anywhere that web files are hosted — a traditional ser
 ## User Styles & Scripts
 
 The example site includes styles from the [Pico CSS](https://picocss.com/) framework and some custom styles via a `user-styles.css` file. This and [other classless CSS frameworks](https://dohliam.github.io/dropin-minimal-css/) work well with Markdown content. The example site also includes a dark/light mode toggle and code syntax highlighting via a `user-scripts.js` file.
+
+## Third-Party Libraries
+
+All third-party libraries are stored in the repository under `assets/vendor/` – the site does not load anything from external CDNs. The versions are defined in `package.json`:
+
+| Library | Used for | Folder |
+| :--- | :--- | :--- |
+| [Showdown](https://showdownjs.com/) | Markdown → HTML conversion | `assets/vendor/showdown/` |
+| [Pico CSS](https://picocss.com/) | Base styles | `assets/vendor/pico/` |
+| [highlight.js](https://highlightjs.org/) | Code syntax highlighting | `assets/vendor/highlightjs/` |
+
+**Updates** are handled by [Dependabot](https://docs.github.com/en/code-security/dependabot) (`.github/dependabot.yml`): it opens a weekly pull request that bumps `package.json`, and the `Dependencies` workflow regenerates `assets/vendor/` and pushes the result to the same pull request. To update manually (requires Node.js):
+
+```bash
+npm install --ignore-scripts
+npm run vendor
+```
+
+Never edit files in `assets/vendor/` by hand – the `Dependencies` workflow fails if they don't match `package.json`. Node.js is only needed for updating the libraries; the site itself still has no build step.
 
 ## Limitations
 

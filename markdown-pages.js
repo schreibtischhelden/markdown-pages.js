@@ -1,6 +1,10 @@
 
+// resolve vendored libraries relative to this file, so it also works when
+// markdown-pages.js is loaded from another directory or a CDN
+var mdpBaseUrl = new URL('.', document.currentScript.src);
+
 var script = document.createElement('script');
-script.src = 'https://cdnjs.cloudflare.com/ajax/libs/showdown/1.9.1/showdown.min.js';
+script.src = new URL('assets/vendor/showdown/showdown.min.js', mdpBaseUrl).href;
 document.head.appendChild(script);
 script.onload = function() {
     const urlParams = new URLSearchParams(window.location.search);
