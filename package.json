@@ -6,11 +6,13 @@
 	"license": "MIT",
 	"type": "module",
 	"scripts": {
-		"vendor": "node scripts/vendor.mjs"
+		"vendor": "node scripts/vendor.mjs",
+		"test": "node --test tests/*.test.mjs"
 	},
 	"devDependencies": {
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@picocss/pico": "2.1.1",
+		"dompurify": "3.5.0",
 		"showdown": "2.1.0"
 	}
 }
