@@ -1,12 +1,15 @@
 
+// resolve vendored libraries relative to this file (assets/)
+var userScriptsBaseUrl = new URL('.', document.currentScript.src);
+
 // set syntax highlighting theme based on light or dark mode
 function setHighlightTheme(mode) {
 	var link = document.getElementById('highlight-styles');
 	if (mode == "light") {
-		link.href = 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/stackoverflow-light.min.css'; 
+		link.href = new URL('vendor/highlightjs/stackoverflow-light.min.css', userScriptsBaseUrl).href;
 	}
 	if (mode == "dark") {
-		link.href = 'https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/vs2015.min.css'; 
+		link.href = new URL('vendor/highlightjs/vs2015.min.css', userScriptsBaseUrl).href;
 	}
 	setTimeout(function () {
 		hljs.highlightAll();		
@@ -64,7 +67,7 @@ setTimeout(function () {
 	document.querySelector('main').className = "container";
 
 	var hljs = document.createElement('script');
-	hljs.src = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.4.0/highlight.min.js';
+	hljs.src = new URL('vendor/highlightjs/highlight.min.js', userScriptsBaseUrl).href;
 	document.head.appendChild(hljs);
 
 	var h1css = document.createElement('link');

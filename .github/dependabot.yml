@@ -1,0 +1,29 @@
+# Keeps the vendored front-end libraries (package.json) and the
+# GitHub Actions used in the workflows up to date.
+# After Dependabot bumps package.json, the "Dependencies" workflow
+# regenerates assets/vendor/ and pushes the result to the same PR.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    versioning-strategy: increase
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: ci(deps)
+    groups:
+      actions:
+        patterns: ["*"]

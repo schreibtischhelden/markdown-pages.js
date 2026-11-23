@@ -1,5 +1,5 @@
 
-@import url("https://cdnjs.cloudflare.com/ajax/libs/picocss/1.4.4/pico.min.css");
+@import url("vendor/pico/pico.min.css");
 
 /**** pico style overrides *****/
 
@@ -49,7 +49,7 @@ footer p {
 /* font size, line heights */
 @media (min-width: 990px) {
     :root {
-        --font-size: 18px;
+        --pico-font-size: 18px;
     }
 }
 
@@ -80,6 +80,13 @@ a {
 /* adjust contain widths */
 .container {
     padding-top: 0px;
+}
+
+/* keep the reading width of Pico v1 on very wide screens */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1130px;
+    }
 }
 
 @media (max-width: 1199px) {
@@ -149,7 +156,7 @@ pre {
 
 /* increase color contrast for a11y */
 :root {
-    --primary: #13b1e5 !important;
+    --pico-primary: #13b1e5 !important;
 }
 
 a {

@@ -1,0 +1,57 @@
+name: Dependencies
+
+# Rebuilds assets/vendor/ from the versions in package.json.
+# - Dependabot PRs: the regenerated files are committed back to the PR branch.
+# - All other pushes / PRs: fails if assets/vendor/ is out of sync with package.json.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependencies-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only used to push regenerated files to Dependabot branches
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.head_ref || github.ref }}
+          persist-credentials: ${{ github.actor == 'dependabot[bot]' }}
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: lts/*
+
+      # --ignore-scripts: never run install hooks of third-party packages
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: npm run vendor
+
+      - name: Commit regenerated vendor files (Dependabot only)
+        if: github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'
+        run: |
+          if git diff --quiet -- assets/vendor; then
+            echo "assets/vendor is already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/vendor
+          git commit -m "chore(deps): regenerate assets/vendor"
+          git push
+
+      - name: Verify vendor files are in sync with package.json
+        if: github.actor != 'dependabot[bot]'
+        run: |
+          if ! git diff --exit-code --stat -- assets/vendor; then
+            echo "::error::assets/vendor is out of sync with package.json - run 'npm install --ignore-scripts && npm run vendor' and commit the result."
+            exit 1
+          fi
