@@ -206,10 +206,14 @@
 	//   {{menu:tree}}       the whole menu with all levels (e.g. grouped docs navigation)
 	//   {{menu:sub:<id>}}   children of the main menu item with that id
 	//   {{menu:current}}    children of the main menu item that contains the current page
+	//   {{toc}}             table of contents (h2/h3) of the current page
+	//
+	// Elements outside the rendered regions (e.g. a sidebar in index.html)
+	// can use <nav data-mdp-menu="tree"></nav> and <nav data-mdp-toc></nav>.
 
 	MarkdownPages.menuUrl = 'menu.json';
 
-	var PLACEHOLDER = /\{\{\s*menu:(main|tree|current|sub:([A-Za-z0-9_-]+))\s*\}\}/g;
+	var PLACEHOLDER = /\{\{\s*(?:menu:(main|tree|current|sub:([A-Za-z0-9_-]+))|(toc))\s*\}\}/g;
 	var SAFE_HREF = /^(https?:|mailto:|[^:]*$)/i; // absolute http(s)/mailto, or no scheme at all
 	var MAX_DEPTH = 5;
 
@@ -334,6 +338,26 @@
 	MarkdownPages.parseMenu = parseMenu;
 	MarkdownPages.menuItemsFor = menuItemsFor;
 
+	/**
+	 * All items with a link in menu order (depth first) - used for
+	 * previous/next navigation and search. "section" is the title of the
+	 * top-level item an entry belongs to (null for top-level items).
+	 */
+	function flattenMenu(menu) {
+		var result = [];
+		(function walk(items, section) {
+			items.forEach(function (item) {
+				if (item.href !== null) {
+					result.push({ title: item.title, href: item.href, file: item.file, section: section });
+				}
+				walk(item.children, section === null ? item.title : section);
+			});
+		})(menu && menu.main ? menu.main : [], null);
+		return result;
+	}
+
+	MarkdownPages.flattenMenu = flattenMenu;
+
 	// ---------------------------------------------------------------------
 	// Menu - DOM part
 	// ---------------------------------------------------------------------
@@ -414,10 +438,10 @@
 			var fragment = document.createDocumentFragment();
 			var text = node.nodeValue;
 			var last = 0;
-			text.replace(PLACEHOLDER, function (match, kind, id, offset) {
+			text.replace(PLACEHOLDER, function (match, kind, id, toc, offset) {
 				fragment.appendChild(document.createTextNode(text.slice(last, offset)));
 				var nav = document.createElement('nav');
-				nav.setAttribute('data-mdp-menu', kind);
+				nav.setAttribute(toc ? 'data-mdp-toc' : 'data-mdp-menu', toc ? '' : kind);
 				fragment.appendChild(nav);
 				last = offset + match.length;
 				return match;
@@ -432,7 +456,11 @@
 			}
 		});
 
-		var navs = root.querySelectorAll('[data-mdp-menu]');
+		return fillMenus(root.querySelectorAll('[data-mdp-menu]'), root);
+	}
+
+	/** fills the given <nav data-mdp-menu> elements from menu.json */
+	function fillMenus(navs, root) {
 		if (!navs.length) {
 			return Promise.resolve();
 		}
@@ -467,6 +495,54 @@
 	}
 
 	MarkdownPages.applyMenus = applyMenus;
+	MarkdownPages.loadMenu = loadMenu;
+
+	/** menus placed directly in index.html, outside header/main/footer */
+	function applyStaticMenus() {
+		var navs = Array.prototype.filter.call(document.querySelectorAll('[data-mdp-menu]'), function (nav) {
+			return !nav.closest('header, main, footer');
+		});
+		var sidebar = document.createDocumentFragment(); // no fallback elements to remove here
+		return fillMenus(navs, sidebar).catch(function (error) {
+			console.error('markdown-pages.js: menu', error);
+		});
+	}
+
+	/**
+	 * Fills <nav data-mdp-toc> elements with the h2/h3 headings of <main>.
+	 * Built with DOM APIs only; headings without id are skipped.
+	 */
+	function buildToc() {
+		var main = document.querySelector('main');
+		var headings = main ? main.querySelectorAll('h2[id], h3[id]') : [];
+		document.querySelectorAll('[data-mdp-toc]').forEach(function (nav) {
+			nav.textContent = '';
+			nav.className = 'mdp-toc';
+			if (!nav.hasAttribute('aria-label')) {
+				nav.setAttribute('aria-label', 'Table of contents');
+			}
+			var list = document.createElement('ul');
+			var current = null;
+			headings.forEach(function (heading) {
+				var li = document.createElement('li');
+				var a = document.createElement('a');
+				a.setAttribute('href', '#' + encodeURIComponent(heading.id));
+				a.textContent = heading.textContent;
+				li.appendChild(a);
+				if (heading.tagName === 'H3' && current) {
+					var sub = current.querySelector('ul') || current.appendChild(document.createElement('ul'));
+					sub.appendChild(li);
+				} else {
+					list.appendChild(li);
+					current = li;
+				}
+			});
+			nav.hidden = !headings.length;
+			nav.appendChild(list);
+		});
+	}
+
+	MarkdownPages.buildToc = buildToc;
 
 	// ---------------------------------------------------------------------
 	// Browser runtime
@@ -505,6 +581,9 @@
 		return applyMenus(element).catch(function (error) {
 			console.error('markdown-pages.js: menu', error);
 		}).then(function () {
+			if (selector === 'main') {
+				buildToc();
+			}
 			document.dispatchEvent(new CustomEvent('mdp:rendered', {
 				detail: { region: selector, page: page },
 			}));
@@ -522,7 +601,7 @@
 				return notFound !== null ? notFound : '# Page not found\n\nThe requested page does not exist.';
 			});
 		}).then(function (markdown) {
-			render('main', markdown, page);
+			var rendered = render('main', markdown, page);
 			var h1 = document.querySelector('main h1');
 			if (h1) {
 				document.title = h1.textContent + ' | ' + document.title;
@@ -537,6 +616,7 @@
 			if (target) {
 				target.scrollIntoView();
 			}
+			return rendered;
 		});
 	}
 
@@ -572,6 +652,7 @@
 				renderMain(resolvePage(global.location.search)),
 				renderRegion('header.md', 'header'),
 				renderRegion('footer.md', 'footer'),
+				applyStaticMenus(),
 			]);
 		}).catch(function (error) {
 			console.error('markdown-pages.js:', error);

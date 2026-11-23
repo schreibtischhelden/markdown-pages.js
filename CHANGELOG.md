@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- Documentation site in the style of MkDocs Material / docs.paperless-ngx.com, published with GitHub Pages:
+  `assets/docs.css`, `assets/docs.js` (top bar with search, sidebar navigation, table of contents,
+  previous/next and "edit this page" links, mobile navigation), new pages in `pages/`,
+  `menu.json` with groups, `.nojekyll` for GitHub Pages
+- `markdown-pages.js` — `{{toc}}` / `<nav data-mdp-toc>` table of contents; menus and tables of contents
+  can be placed directly in `index.html`; `MarkdownPages.loadMenu()`, `MarkdownPages.flattenMenu()`
 - `assets/vendor/showdown-forms/` — forms extension `@schreibtischhelden/showdown-forms` 1.0.0
   from npm (managed by Dependabot), replaces the inline forms code;
   includes the fixes for slow regexes on long form lines (CodeQL `js/polynomial-redos`)
@@ -18,7 +24,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `.github/workflows/ci.yml`, `tests/` — unit tests for page resolution (`npm test`)
 - `menu.json` — navigation defined as JSON, inserted with the placeholders
   `{{menu:main}}`, `{{menu:tree}}` (all levels), `{{menu:sub:<id>}}` and `{{menu:current}}`;
-  documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`;
+  documented in `pages/menu.md`;
   `menu.json` is optional – if it is missing or invalid, the hand-written
   navigation marked with `data-mdp-menu-fallback` is used as before
 - Forms in Markdown (`:::form` blocks, via [showdown-forms](https://github.com/schreibtischhelden/showdown-forms)):

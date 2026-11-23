@@ -1,7 +1,6 @@
 
 # Forms
 
-{{menu:current}}
 
 Forms can be written directly in Markdown inside a `:::form` block. Forms are provided by the Showdown extension [@schreibtischhelden/showdown-forms](https://github.com/schreibtischhelden/showdown-forms) (vendored in `assets/vendor/showdown-forms/`). markdown-pages.js configures it with `MarkdownPages.formsOptions` (`idPrefix: "mdp-form"`, `dataPrefix: "mdp"`).
 
@@ -68,4 +67,3 @@ This page uses exactly that in `assets/user-scripts.js` to show the submitted va
 
 All labels and values are HTML-escaped, the generated form also passes through the sanitizer, `action` URLs with other schemes (`javascript:`, `data:` …) are dropped.
 
-Go back to [Features](?page=features).
