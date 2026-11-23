@@ -3,7 +3,7 @@
 
 {{menu:current}}
 
-Forms can be written directly in Markdown inside a `:::form` block. The syntax is inspired by [showdown-forms](https://github.com/runvnc/showdown-forms), implemented as a Showdown extension in `markdown-pages.js`.
+Forms can be written directly in Markdown inside a `:::form` block. Forms are provided by the Showdown extension [@schreibtischhelden/showdown-forms](https://github.com/schreibtischhelden/showdown-forms) (vendored in `assets/vendor/showdown-forms/`). markdown-pages.js configures it with `MarkdownPages.formsOptions` (`idPrefix: "mdp-form"`, `dataPrefix: "mdp"`).
 
 ## Example
 

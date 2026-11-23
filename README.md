@@ -95,6 +95,7 @@ All third-party libraries are stored in the repository under `assets/vendor/` â€
 | :--- | :--- | :--- |
 | [Showdown](https://showdownjs.com/) | Markdown â†’ HTML conversion | `assets/vendor/showdown/` |
 | [DOMPurify](https://github.com/cure53/DOMPurify) | Sanitizing the generated HTML | `assets/vendor/dompurify/` |
+| [showdown-forms](https://github.com/schreibtischhelden/showdown-forms) | Forms in Markdown (`:::form`) | `assets/vendor/showdown-forms/` |
 | [Pico CSS](https://picocss.com/) | Base styles | `assets/vendor/pico/` |
 | [highlight.js](https://highlightjs.org/) | Code syntax highlighting | `assets/vendor/highlightjs/` |
 
