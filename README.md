@@ -3,7 +3,7 @@
 
 # markdown-pages.js – _simple Markdown-based static sites, without the generator_
 
-_`Last Updated: 3/30/2026`_ [`edit`](https://github.com/dandalpiaz/markdown-pages/edit/main/README.md) <button id="light-toggle" onclick="toggleLight()" aria-label="switch to light mode">🌗</button>
+_`Last Updated: 3/30/2026`_ [`edit`](https://github.com/dandalpiaz/markdown-pages/edit/main/README.md) <button id="light-toggle" aria-label="switch to light mode">🌗</button>
 
 Use **markdown-pages.js** to create simple websites using [Markdown](https://www.markdownguide.org/basic-syntax/) files for page content. No site generator necessary - no build process, installs, etc. Client-side JavaScript fetches the Markdown files and handles the conversion to HTML. Content files can be edited directly where they are hosted! Check out the **[GitHub ![GitHub Logo](assets/images/github.png) repository](https://github.com/dandalpiaz/markdown-pages)**!
 
@@ -49,21 +49,25 @@ Check out the [sample page](?page=sample-page)
 
 **Check out the [sample page](?page=sample-page)** (link will work on the rendered site, not github.com).
 
-_Note: if you need to use HTML elements that don't have a Markdown equivalent, you can simply add the HTML in the Markdown file. It will be ignored by the converter and kept as-is._
+_Note: if you need to use HTML elements that don't have a Markdown equivalent, you can add the HTML in the Markdown file. It is kept by the converter, but sanitized with [DOMPurify](https://github.com/cure53/DOMPurify): scripts, `<style>`, `<iframe>`, event handlers like `onclick` and `javascript:` links are removed. See [SECURITY.md](SECURITY.md)._
 
 ## Markdown Options
 
 The library uses the [Showdown JS](https://showdownjs.com/) converter which provides some extra options for how the Markdown content will be converted. The following [Showdown options](https://showdownjs.com/docs/available-options/) are active for this library:
 
 ```javascript
-conv.setOption('tables', 'true');
-conv.setOption('emoji', 'true');
-conv.setOption('ghCompatibleHeaderId', 'true');
-conv.setOption('simpleLineBreaks', 'true');
-conv.setOption('strikethrough', 'true');
-conv.setOption('tasklists', 'true');
-conv.setOption('parseImgDimensions', 'true');
+MarkdownPages.showdownOptions = {
+  tables: true,
+  emoji: true,
+  ghCompatibleHeaderId: true,
+  simpleLineBreaks: true,
+  strikethrough: true,
+  tasklists: true,
+  parseImgDimensions: true,
+};
 ```
+
+The options can be changed from your own script before the page is rendered (`MarkdownPages.showdownOptions.emoji = false;`). After each region (`main`, `header`, `footer`) is rendered, a `mdp:rendered` event is dispatched on `document`.
 
 ## Deployment
 
@@ -80,6 +84,7 @@ All third-party libraries are stored in the repository under `assets/vendor/` �
 | Library | Used for | Folder |
 | :--- | :--- | :--- |
 | [Showdown](https://showdownjs.com/) | Markdown → HTML conversion | `assets/vendor/showdown/` |
+| [DOMPurify](https://github.com/cure53/DOMPurify) | Sanitizing the generated HTML | `assets/vendor/dompurify/` |
 | [Pico CSS](https://picocss.com/) | Base styles | `assets/vendor/pico/` |
 | [highlight.js](https://highlightjs.org/) | Code syntax highlighting | `assets/vendor/highlightjs/` |
 

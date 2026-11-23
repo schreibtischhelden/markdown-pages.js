@@ -4,6 +4,10 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- Content Security Policy: scripts, styles and Markdown only from this site.
+	     Adjust img-src / frame-src / form-action if your pages embed external content. -->
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; connect-src 'self'; font-src 'self'; frame-src https:; object-src 'none'; base-uri 'self'; form-action 'self'">
+	<meta name="referrer" content="strict-origin-when-cross-origin">
 	<meta name="description" content="markdown-pages.js - simple Markdown-based static sites, without the generator">
 	<title>markdown-pages.js</title>
 	<link rel="shortcut icon" type="image/png" href="assets/images/favicon.png"/>

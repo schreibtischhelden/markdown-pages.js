@@ -19,6 +19,10 @@ const manifest = {
 		target: 'showdown',
 		files: [['dist/showdown.min.js', 'showdown.min.js'], ['LICENSE', 'LICENSE']],
 	},
+	'dompurify': {
+		target: 'dompurify',
+		files: [['dist/purify.min.js', 'purify.min.js'], ['LICENSE', 'LICENSE']],
+	},
 	'@highlightjs/cdn-assets': {
 		target: 'highlightjs',
 		files: [

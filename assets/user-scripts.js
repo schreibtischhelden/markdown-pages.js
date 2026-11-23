@@ -1,4 +1,9 @@
 
+// Optional example scripts: dark/light mode toggle, syntax highlighting and
+// highlighting of the current page in the header navigation.
+// Everything runs after markdown-pages.js dispatches "mdp:rendered", so no
+// inline event handlers (onclick=...) are needed in the Markdown files.
+
 // resolve vendored libraries relative to this file (assets/)
 var userScriptsBaseUrl = new URL('.', document.currentScript.src);
 
@@ -11,30 +16,37 @@ function setHighlightTheme(mode) {
 	if (mode == "dark") {
 		link.href = new URL('vendor/highlightjs/vs2015.min.css', userScriptsBaseUrl).href;
 	}
-	setTimeout(function () {
-		hljs.highlightAll();		
-	}, 175);
+}
+
+function getMode() {
+	try {
+		var mode = localStorage.getItem("mode");
+		if (mode == "light" || mode == "dark") {
+			return mode;
+		}
+	} catch (e) {
+		// storage blocked (private mode etc.) - fall back to system setting
+	}
+	return window.matchMedia('(prefers-color-scheme: light)').matches ? "light" : "dark";
+}
+
+function applyMode(mode) {
+	document.documentElement.setAttribute("data-theme", mode);
+	try {
+		localStorage.setItem("mode", mode);
+	} catch (e) {
+		// ignore
+	}
+	setHighlightTheme(mode);
+	var button = document.getElementById("light-toggle");
+	if (button) {
+		button.setAttribute("aria-pressed", mode == "light" ? "true" : "false");
+	}
 }
 
 // toggle between light and dark mode
 function toggleLight() {
-	var mode = localStorage.getItem("mode");
-	if (mode == "light") {
-		document.documentElement.setAttribute("data-theme", "dark");
-    	localStorage.setItem("mode", "dark");
-		setHighlightTheme("dark");
-		setTimeout(function () {
-			document.getElementById("light-toggle").setAttribute("aria-pressed", "false");		
-		}, 175);
-	}
-	if (mode == "dark") {
-		document.documentElement.setAttribute("data-theme", "light");
-		localStorage.setItem("mode", "light");
-		setHighlightTheme("light");
-		setTimeout(function () {
-			document.getElementById("light-toggle").setAttribute("aria-pressed", "true");		
-		}, 175);
-	}
+	applyMode(getMode() == "light" ? "dark" : "light");
 }
 
 // bold the link for the current page in the header
@@ -58,32 +70,46 @@ function boldCurrentPage() {
 	}
 }
 
-setTimeout(function () {
-	boldCurrentPage();
-}, 100);
+function highlightCode() {
+	if (window.hljs) {
+		document.querySelectorAll('pre code:not(.hljs)').forEach(function (block) {
+			window.hljs.highlightElement(block);
+		});
+	}
+}
 
-// get current light/dark mode on page load
-(function () {
-	document.querySelector('main').className = "container";
-
-	var hljs = document.createElement('script');
-	hljs.src = new URL('vendor/highlightjs/highlight.min.js', userScriptsBaseUrl).href;
-	document.head.appendChild(hljs);
-
-	var h1css = document.createElement('link');
-	h1css.rel = 'stylesheet';
-	h1css.id = 'highlight-styles';
-	document.head.appendChild(h1css);
-
-	var mode = localStorage.getItem("mode");
-	if (mode == "light" || (mode == null && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-		localStorage.setItem("mode", "dark");
-		toggleLight();
-	} else {
-		localStorage.setItem("mode", "light");
+// light/dark toggle button (id="light-toggle") - event delegation instead of onclick
+document.addEventListener('click', function (event) {
+	if (event.target.closest && event.target.closest('#light-toggle')) {
 		toggleLight();
 	}
-})();
+});
 
-// add ID to main element for skip link
-document.querySelector('main').id = "main";
+// react to rendered Markdown regions
+document.addEventListener('mdp:rendered', function (event) {
+	if (event.detail.region == 'header') {
+		boldCurrentPage();
+	}
+	applyMode(getMode());
+	highlightCode();
+});
+
+// set up on page load
+(function () {
+	var main = document.querySelector('main');
+	main.className = "container";
+	// add ID to main element for skip link
+	main.id = "main";
+
+	var hljsScript = document.createElement('script');
+	hljsScript.src = new URL('vendor/highlightjs/highlight.min.js', userScriptsBaseUrl).href;
+	hljsScript.onload = highlightCode;
+	document.head.appendChild(hljsScript);
+
+	var hlcss = document.createElement('link');
+	hlcss.rel = 'stylesheet';
+	hlcss.id = 'highlight-styles';
+	document.head.appendChild(hlcss);
+
+	applyMode(getMode());
+})();
