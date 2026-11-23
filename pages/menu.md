@@ -43,6 +43,7 @@ Write the placeholder on its own line (it replaces the paragraph) or inline:
 | Placeholder | Output |
 | :--- | :--- |
 | `{{menu:main}}` | Top-level items of the main menu (typically in `header.md`) |
+| `{{menu:tree}}` | The whole menu with all levels as nested list – e.g. a grouped documentation navigation |
 | `{{menu:sub:<id>}}` | Submenu of the main menu item with that `id`, e.g. `{{menu:sub:docs}}` |
 | `{{menu:current}}` | Submenu of the main menu item that contains the current page – shown on the item's own page and all its subpages, hidden elsewhere |
 
@@ -67,6 +68,6 @@ Mark the hand-written navigation with `data-mdp-menu-fallback`. It is shown only
 
 ## Styling
 
-The link of the current page gets `aria-current="page"`, its list item the class `mdp-menu-item-current`, parent items the class `mdp-menu-item-active`. The menus have the classes `mdp-menu` and `mdp-menu-main` / `mdp-menu-sub` / `mdp-menu-current` for styling.
+The link of the current page gets `aria-current="page"`, its list item the class `mdp-menu-item-current`, parent items the class `mdp-menu-item-active`. The menus have the classes `mdp-menu` and `mdp-menu-main` / `mdp-menu-tree` / `mdp-menu-sub` / `mdp-menu-current` for styling.
 
 Go back to [Features](?page=features).

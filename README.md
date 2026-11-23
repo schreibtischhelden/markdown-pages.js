@@ -73,7 +73,7 @@ The options can be changed from your own script before the page is rendered (`Ma
 
 ## Menu
 
-The navigation can be defined once in a `menu.json` file and inserted with placeholders: `{{menu:main}}` (main menu, see `header.md`), `{{menu:sub:<id>}}` (submenu of one main menu item) and `{{menu:current}}` (submenu of the section the current page belongs to). `menu.json` is only loaded when a page contains a placeholder. The file is optional: if it is missing or invalid, the hand-written navigation marked with `data-mdp-menu-fallback` is used as before. See the **[menu documentation](?page=menu)** (`pages/menu.md`).
+The navigation can be defined once in a `menu.json` file and inserted with placeholders: `{{menu:main}}` (main menu, see `header.md`), `{{menu:tree}}` (whole menu with all levels), `{{menu:sub:<id>}}` (submenu of one main menu item) and `{{menu:current}}` (submenu of the section the current page belongs to). `menu.json` is only loaded when a page contains a placeholder. The file is optional: if it is missing or invalid, the hand-written navigation marked with `data-mdp-menu-fallback` is used as before. See the **[menu documentation](?page=menu)** (`pages/menu.md`).
 
 ## Forms
 

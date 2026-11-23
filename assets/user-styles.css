@@ -297,19 +297,19 @@ figcaption {
     font-weight: 700;
 }
 
-/* submenus are vertical lists */
-.mdp-menu-sub, .mdp-menu-current {
+/* submenus and the full tree are vertical lists */
+.mdp-menu-sub, .mdp-menu-current, .mdp-menu-tree {
     display: block;
     margin-bottom: var(--pico-spacing);
 }
 
-.mdp-menu-sub ul, .mdp-menu-current ul {
+.mdp-menu-sub ul, .mdp-menu-current ul, .mdp-menu-tree ul {
     display: block;
     margin: 0;
     padding-left: 1.25rem;
 }
 
-.mdp-menu-sub li, .mdp-menu-current li {
+.mdp-menu-sub li, .mdp-menu-current li, .mdp-menu-tree li {
     display: list-item;
     list-style: disc;
     padding: 0;
