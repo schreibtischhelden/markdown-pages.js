@@ -121,6 +121,247 @@
 	MarkdownPages.toHtml = toHtml;
 
 	// ---------------------------------------------------------------------
+	// Menu (menu.json) - pure part, unit tested
+	// ---------------------------------------------------------------------
+	//
+	// menu.json:
+	// { "main": [
+	//     { "title": "Home", "href": "." },
+	//     { "title": "Docs", "id": "docs", "page": "docs", "children": [
+	//         { "title": "Install", "page": "install" } ] },
+	//     { "title": "GitHub", "href": "https://github.com/..." } ] }
+	//
+	// Placeholders (in any Markdown file, also header.md / footer.md):
+	//   {{menu:main}}       top-level items of the main menu
+	//   {{menu:sub:<id>}}   children of the main menu item with that id
+	//   {{menu:current}}    children of the main menu item that contains the current page
+
+	MarkdownPages.menuUrl = 'menu.json';
+
+	var PLACEHOLDER = /\{\{\s*menu:(main|current|sub:([A-Za-z0-9_-]+))\s*\}\}/g;
+	var SAFE_HREF = /^(https?:|mailto:|[^:]*$)/i; // absolute http(s)/mailto, or no scheme at all
+	var MAX_DEPTH = 5;
+
+	function slug(text) {
+		return String(text).toLowerCase().trim()
+			.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+	}
+
+	/** href of a menu item, or null if it has no valid target */
+	function menuItemHref(item) {
+		if (typeof item.page === 'string') {
+			var page = item.page.replace(/\.md$/, '');
+			return isSafePath(page) ? '?page=' + page : null;
+		}
+		if (typeof item.href === 'string') {
+			var href = item.href.trim();
+			// "//host" would be protocol-relative, control characters are never valid
+			if (/^\/\//.test(href) || /[\u0000-\u001f\u007f]/.test(href)) {
+				return null;
+			}
+			return SAFE_HREF.test(href) ? href : null;
+		}
+		return null;
+	}
+
+	/** Markdown file a menu item points to (for "current page"), or null */
+	function menuItemFile(item) {
+		var href = menuItemHref(item);
+		if (href === null) {
+			return null;
+		}
+		if (href === '.' || href === './' || href === '' || href === 'index.html' || href === './index.html') {
+			return 'README.md';
+		}
+		if (href.charAt(0) === '?') {
+			return resolvePage(href);
+		}
+		return null;
+	}
+
+	/**
+	 * Validates and normalises the parsed menu.json. Invalid entries are
+	 * dropped instead of breaking the whole menu.
+	 */
+	function normalizeMenu(data) {
+		function items(list, depth) {
+			if (!Array.isArray(list) || depth > MAX_DEPTH) {
+				return [];
+			}
+			return list.reduce(function (result, raw) {
+				if (!raw || typeof raw !== 'object' || typeof raw.title !== 'string' || !raw.title.trim()) {
+					return result;
+				}
+				var item = {
+					title: raw.title.trim(),
+					id: typeof raw.id === 'string' && /^[A-Za-z0-9_-]+$/.test(raw.id)
+						? raw.id
+						: slug(typeof raw.page === 'string' ? raw.page : raw.title),
+					href: menuItemHref(raw),
+					file: menuItemFile(raw),
+					children: items(raw.children, depth + 1),
+				};
+				if (item.href !== null || item.children.length) {
+					result.push(item);
+				}
+				return result;
+			}, []);
+		}
+		return { main: items(data && data.main, 0) };
+	}
+
+	function containsFile(item, file) {
+		return item.file === file || item.children.some(function (child) {
+			return containsFile(child, file);
+		});
+	}
+
+	/**
+	 * Returns the list of items to show for a placeholder:
+	 *   "main", "current" or "sub:<id>"
+	 */
+	function menuItemsFor(menu, kind, currentFile) {
+		if (kind === 'main') {
+			return menu.main;
+		}
+		var parent = null;
+		if (kind === 'current') {
+			parent = menu.main.filter(function (item) {
+				return containsFile(item, currentFile);
+			})[0];
+		} else if (kind.indexOf('sub:') === 0) {
+			var id = kind.slice(4);
+			parent = menu.main.filter(function (item) {
+				return item.id === id;
+			})[0];
+		}
+		return parent ? parent.children : [];
+	}
+
+	MarkdownPages.normalizeMenu = normalizeMenu;
+	MarkdownPages.menuItemsFor = menuItemsFor;
+
+	// ---------------------------------------------------------------------
+	// Menu - DOM part
+	// ---------------------------------------------------------------------
+
+	var menuPromise = null;
+
+	function loadMenu() {
+		if (!menuPromise) {
+			menuPromise = fetchText(MarkdownPages.menuUrl).then(function (text) {
+				if (text === null) {
+					console.warn('markdown-pages.js: ' + MarkdownPages.menuUrl + ' not found');
+					return normalizeMenu(null);
+				}
+				return normalizeMenu(JSON.parse(text));
+			}).catch(function (error) {
+				console.error('markdown-pages.js: invalid ' + MarkdownPages.menuUrl, error);
+				return normalizeMenu(null);
+			});
+		}
+		return menuPromise;
+	}
+
+	/** builds <ul> with DOM APIs only - titles are never parsed as HTML */
+	function buildList(items, currentFile, nested) {
+		var ul = document.createElement('ul');
+		items.forEach(function (item) {
+			var li = document.createElement('li');
+			var label;
+			if (item.href !== null) {
+				label = document.createElement('a');
+				label.setAttribute('href', item.href);
+				if (/^https?:/i.test(item.href)) {
+					label.setAttribute('rel', 'noopener noreferrer');
+				}
+			} else {
+				label = document.createElement('span');
+			}
+			label.textContent = item.title;
+			if (item.file !== null && item.file === currentFile) {
+				label.setAttribute('aria-current', 'page');
+				li.className = 'mdp-menu-item-current';
+			} else if (containsFile(item, currentFile)) {
+				li.className = 'mdp-menu-item-active';
+			}
+			li.appendChild(label);
+			if (nested && item.children.length) {
+				li.appendChild(buildList(item.children, currentFile, nested));
+			}
+			ul.appendChild(li);
+		});
+		return ul;
+	}
+
+	/**
+	 * Replaces {{menu:...}} placeholders in text nodes (outside of code) with
+	 * <nav data-mdp-menu="..."> elements, then fills all such elements.
+	 */
+	function applyMenus(root) {
+		var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+			acceptNode: function (node) {
+				return node.parentNode.closest('code, pre, script, style, textarea')
+					? NodeFilter.FILTER_REJECT
+					: NodeFilter.FILTER_ACCEPT;
+			},
+		});
+		var textNodes = [];
+		while (walker.nextNode()) {
+			PLACEHOLDER.lastIndex = 0;
+			if (PLACEHOLDER.test(walker.currentNode.nodeValue)) {
+				textNodes.push(walker.currentNode);
+			}
+		}
+
+		textNodes.forEach(function (node) {
+			var fragment = document.createDocumentFragment();
+			var text = node.nodeValue;
+			var last = 0;
+			text.replace(PLACEHOLDER, function (match, kind, id, offset) {
+				fragment.appendChild(document.createTextNode(text.slice(last, offset)));
+				var nav = document.createElement('nav');
+				nav.setAttribute('data-mdp-menu', kind);
+				fragment.appendChild(nav);
+				last = offset + match.length;
+				return match;
+			});
+			fragment.appendChild(document.createTextNode(text.slice(last)));
+			var parent = node.parentNode;
+			// a paragraph that only holds the placeholder is replaced entirely
+			if (parent.tagName === 'P' && parent.childNodes.length === 1 && !text.replace(PLACEHOLDER, '').trim()) {
+				parent.replaceWith(fragment);
+			} else {
+				parent.replaceChild(fragment, node);
+			}
+		});
+
+		var navs = root.querySelectorAll('[data-mdp-menu]');
+		if (!navs.length) {
+			return Promise.resolve();
+		}
+		return loadMenu().then(function (menu) {
+			var currentFile = resolvePage(global.location.search);
+			navs.forEach(function (nav) {
+				var kind = nav.getAttribute('data-mdp-menu');
+				var items = menuItemsFor(menu, kind, currentFile);
+				nav.className = 'mdp-menu mdp-menu-' + kind.split(':')[0];
+				if (!nav.hasAttribute('aria-label')) {
+					nav.setAttribute('aria-label', kind === 'main' ? 'Main menu' : 'Submenu');
+				}
+				nav.textContent = '';
+				if (items.length) {
+					nav.appendChild(buildList(items, currentFile, kind !== 'main'));
+				} else {
+					nav.hidden = true;
+				}
+			});
+		});
+	}
+
+	MarkdownPages.applyMenus = applyMenus;
+
+	// ---------------------------------------------------------------------
 	// Browser runtime
 	// ---------------------------------------------------------------------
 
@@ -153,9 +394,13 @@
 			return;
 		}
 		element.innerHTML = toHtml(markdown);
-		document.dispatchEvent(new CustomEvent('mdp:rendered', {
-			detail: { region: selector, page: page },
-		}));
+		return applyMenus(element).catch(function (error) {
+			console.error('markdown-pages.js: menu', error);
+		}).then(function () {
+			document.dispatchEvent(new CustomEvent('mdp:rendered', {
+				detail: { region: selector, page: page },
+			}));
+		});
 	}
 
 	function renderMain(page) {

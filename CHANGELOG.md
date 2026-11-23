@@ -13,6 +13,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   fails on other PRs when `assets/vendor/` is out of sync with `package.json`
 - `.github/workflows/codeql.yml` — CodeQL analysis for JavaScript and workflows
 - `.github/workflows/ci.yml`, `tests/` — unit tests for page resolution (`npm test`)
+- `menu.json` — navigation defined as JSON, inserted with the placeholders
+  `{{menu:main}}`, `{{menu:sub:<id>}}` and `{{menu:current}}`;
+  documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`
 - `markdown-pages.js` — `mdp:rendered` event after each rendered region,
   configurable `MarkdownPages.showdownOptions` and `MarkdownPages.sanitizeConfig`
 

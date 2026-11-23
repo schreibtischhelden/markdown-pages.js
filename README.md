@@ -11,6 +11,7 @@ Use **markdown-pages.js** to create simple websites using [Markdown](https://www
 
 - [Quick Start](#quick-start)
 - [Markdown Options](#markdown-options)
+- [Menu](#menu)
 - [Deployment](#deployment)
 - [User Styles & Scripts](#user-styles--scripts)
 - [Third-Party Libraries](#third-party-libraries)
@@ -68,6 +69,10 @@ MarkdownPages.showdownOptions = {
 ```
 
 The options can be changed from your own script before the page is rendered (`MarkdownPages.showdownOptions.emoji = false;`). After each region (`main`, `header`, `footer`) is rendered, a `mdp:rendered` event is dispatched on `document`.
+
+## Menu
+
+The navigation can be defined once in a `menu.json` file and inserted with placeholders: `{{menu:main}}` (main menu, see `header.md`), `{{menu:sub:<id>}}` (submenu of one main menu item) and `{{menu:current}}` (submenu of the section the current page belongs to). `menu.json` is only loaded when a page contains a placeholder. See the **[menu documentation](?page=menu)** (`pages/menu.md`).
 
 ## Deployment
 
