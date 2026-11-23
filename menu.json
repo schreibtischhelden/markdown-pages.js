@@ -1,14 +1,35 @@
 {
 	"main": [
-		{ "title": "markdown-pages.js", "href": "." },
-		{ "title": "sample page", "page": "sample-page" },
+		{ "title": "Home", "href": "." },
 		{
-			"title": "features",
-			"id": "features",
-			"page": "features",
+			"title": "Getting started",
 			"children": [
-				{ "title": "menu", "page": "menu" },
-				{ "title": "forms", "page": "forms" }
+				{ "title": "Quick start", "page": "quick-start" },
+				{ "title": "Deployment", "page": "deployment" }
+			]
+		},
+		{
+			"title": "Usage",
+			"children": [
+				{ "title": "Writing pages", "page": "writing-pages" },
+				{ "title": "Menu", "page": "menu" },
+				{ "title": "Forms", "page": "forms" },
+				{ "title": "Styles & scripts", "page": "theming" },
+				{ "title": "Markdown showcase", "page": "sample-page" }
+			]
+		},
+		{
+			"title": "Reference",
+			"children": [
+				{ "title": "JavaScript API", "page": "api" },
+				{ "title": "Security", "href": "?SECURITY" },
+				{ "title": "Changelog", "href": "?CHANGELOG" }
+			]
+		},
+		{
+			"title": "Project",
+			"children": [
+				{ "title": "Development", "page": "development" }
 			]
 		}
 	]

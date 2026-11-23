@@ -114,3 +114,24 @@ test('menuItemsFor "tree" returns the whole menu including children', () => {
 	assert.deepEqual(tree.map((i) => i.title), ['Home', 'Docs', 'Blog']);
 	assert.deepEqual(tree[1].children.map((i) => i.title), ['Install', 'Usage']);
 });
+
+test('flattenMenu lists linked items in menu order with their section', () => {
+	// Arrange
+	const docs = normalizeMenu({ main: [
+		{ title: 'Home', href: '.' },
+		{ title: 'Usage', children: [
+			{ title: 'Menu', page: 'menu' },
+			{ title: 'Forms', page: 'forms', children: [{ title: 'Fields', page: 'fields' }] },
+		] },
+		{ title: 'GitHub', href: 'https://example.com' },
+	] });
+
+	// Act
+	const flat = plain(sandbox.MarkdownPages.flattenMenu(docs));
+
+	// Assert
+	assert.deepEqual(flat.map((i) => i.title), ['Home', 'Menu', 'Forms', 'Fields', 'GitHub']);
+	assert.deepEqual(flat.map((i) => i.section), [null, 'Usage', 'Usage', 'Usage', null]);
+	assert.equal(flat[1].file, 'pages/menu.md');
+	assert.deepEqual(plain(sandbox.MarkdownPages.flattenMenu(null)), []);
+});

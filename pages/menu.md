@@ -1,7 +1,6 @@
 
 # Menu
 
-{{menu:current}}
 
 The navigation is defined once in a `menu.json` file next to `index.html` and inserted into any Markdown file (including `header.md` and `footer.md`) with placeholders.
 
@@ -47,7 +46,9 @@ Write the placeholder on its own line (it replaces the paragraph) or inline:
 | `{{menu:sub:<id>}}` | Submenu of the main menu item with that `id`, e.g. `{{menu:sub:docs}}` |
 | `{{menu:current}}` | Submenu of the main menu item that contains the current page – shown on the item's own page and all its subpages, hidden elsewhere |
 
-Placeholders inside code (`` `...` `` or code blocks) are not replaced. Instead of a placeholder, an element like `<nav data-mdp-menu="sub:docs"></nav>` can be used.
+Placeholders inside code (`` `...` `` or code blocks) are not replaced. Instead of a placeholder, an element like `<nav data-mdp-menu="sub:docs"></nav>` can be used – also directly in `index.html`, outside of `header`/`main`/`footer`. This site does that for the sidebar: `<nav data-mdp-menu="tree">`. Groups without `page`/`href` (e.g. *Usage*) are shown as headings.
+
+Related: `{{toc}}` (or `<nav data-mdp-toc>`) inserts a table of contents of the current page, see [Writing pages](?page=writing-pages#placeholders).
 
 ## Without menu.json (fallback)
 
@@ -70,4 +71,3 @@ Mark the hand-written navigation with `data-mdp-menu-fallback`. It is shown only
 
 The link of the current page gets `aria-current="page"`, its list item the class `mdp-menu-item-current`, parent items the class `mdp-menu-item-active`. The menus have the classes `mdp-menu` and `mdp-menu-main` / `mdp-menu-tree` / `mdp-menu-sub` / `mdp-menu-current` for styling.
 
-Go back to [Features](?page=features).
