@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../markdown-pages.js', import.meta.url), 'u
 const sandbox = { URLSearchParams, URL };
 vm.createContext(sandbox);
 vm.runInContext(source, sandbox);
-const { normalizeMenu, menuItemsFor } = sandbox.MarkdownPages;
+const { normalizeMenu, parseMenu, menuItemsFor } = sandbox.MarkdownPages;
 
 // plain copy so deepEqual does not compare objects across vm realms
 const plain = (value) => JSON.parse(JSON.stringify(value));
@@ -85,4 +85,17 @@ test('normalizeMenu keeps titles as plain text', () => {
 test('normalizeMenu tolerates missing or malformed data', () => {
 	assert.deepEqual(plain(normalizeMenu(null)), { main: [] });
 	assert.deepEqual(plain(normalizeMenu({ main: 'x' })), { main: [] });
+});
+
+test('parseMenu accepts a valid menu.json', () => {
+	// Act
+	const result = plain(parseMenu('{"main":[{"title":"Home","href":"."}]}'));
+
+	// Assert
+	assert.equal(result.main[0].title, 'Home');
+});
+
+test('parseMenu throws on invalid menu.json so the fallback navigation is used', () => {
+	const invalid = ['', '{ "main": [ broken', 'null', '[]', '{"main": "x"}', '{"menu": []}'];
+	invalid.forEach((text) => assert.throws(() => parseMenu(text), undefined, text));
 });

@@ -15,7 +15,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `.github/workflows/ci.yml`, `tests/` — unit tests for page resolution (`npm test`)
 - `menu.json` — navigation defined as JSON, inserted with the placeholders
   `{{menu:main}}`, `{{menu:sub:<id>}}` and `{{menu:current}}`;
-  documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`
+  documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`;
+  `menu.json` is optional – if it is missing or invalid, the hand-written
+  navigation marked with `data-mdp-menu-fallback` is used as before
 - `markdown-pages.js` — `mdp:rendered` event after each rendered region,
   configurable `MarkdownPages.showdownOptions` and `MarkdownPages.sanitizeConfig`
 

@@ -48,6 +48,25 @@ Write the placeholder on its own line (it replaces the paragraph) or inline:
 
 Placeholders inside code (`` `...` `` or code blocks) are not replaced. Instead of a placeholder, an element like `<nav data-mdp-menu="sub:docs"></nav>` can be used.
 
+## Without menu.json (fallback)
+
+`menu.json` is optional. If it is missing, cannot be loaded or is invalid (no valid JSON or no `"main"` array), the error is caught, the placeholders are removed and the previous, hand-written navigation is used – a note is logged to the browser console.
+
+Mark the hand-written navigation with `data-mdp-menu-fallback`. It is shown only when no menu could be loaded and removed otherwise:
+
+```html
+{{menu:main}}
+
+<p role="navigation" data-mdp-menu-fallback>
+    <a href=".">Home</a> • 
+    <a href="?page=sample-page">sample page</a>
+</p>
+```
+
+`header.md` of this site works exactly like that.
+
+## Styling
+
 The link of the current page gets `aria-current="page"`, its list item the class `mdp-menu-item-current`, parent items the class `mdp-menu-item-active`. The menus have the classes `mdp-menu` and `mdp-menu-main` / `mdp-menu-sub` / `mdp-menu-current` for styling.
 
 Go back to [Features](?page=features).

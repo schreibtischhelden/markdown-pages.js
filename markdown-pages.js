@@ -238,7 +238,20 @@
 		return parent ? parent.children : [];
 	}
 
+	/**
+	 * Parses the text of menu.json. Throws if it is not valid JSON or has no
+	 * "main" array, so the caller can fall back to the hand-written navigation.
+	 */
+	function parseMenu(text) {
+		var data = JSON.parse(text);
+		if (!data || typeof data !== 'object' || !Array.isArray(data.main)) {
+			throw new Error('"main" must be an array');
+		}
+		return normalizeMenu(data);
+	}
+
 	MarkdownPages.normalizeMenu = normalizeMenu;
+	MarkdownPages.parseMenu = parseMenu;
 	MarkdownPages.menuItemsFor = menuItemsFor;
 
 	// ---------------------------------------------------------------------
@@ -249,15 +262,18 @@
 
 	function loadMenu() {
 		if (!menuPromise) {
-			menuPromise = fetchText(MarkdownPages.menuUrl).then(function (text) {
+			// menu.json is optional: any failure (missing file, network error,
+			// invalid JSON or structure) resolves to null -> fallback navigation
+			menuPromise = Promise.resolve().then(function () {
+				return fetchText(MarkdownPages.menuUrl);
+			}).then(function (text) {
 				if (text === null) {
-					console.warn('markdown-pages.js: ' + MarkdownPages.menuUrl + ' not found');
-					return normalizeMenu(null);
+					throw new Error(MarkdownPages.menuUrl + ' not found');
 				}
-				return normalizeMenu(JSON.parse(text));
+				return parseMenu(text);
 			}).catch(function (error) {
-				console.error('markdown-pages.js: invalid ' + MarkdownPages.menuUrl, error);
-				return normalizeMenu(null);
+				console.info('markdown-pages.js: no menu, using fallback navigation (' + error.message + ')');
+				return null;
 			});
 		}
 		return menuPromise;
@@ -341,6 +357,17 @@
 			return Promise.resolve();
 		}
 		return loadMenu().then(function (menu) {
+			if (menu === null) {
+				// no usable menu.json: drop the placeholders, keep the hand-written navigation
+				navs.forEach(function (nav) {
+					nav.remove();
+				});
+				return;
+			}
+			// menu.json loaded: hand-written navigation marked as fallback is replaced
+			root.querySelectorAll('[data-mdp-menu-fallback]').forEach(function (element) {
+				element.remove();
+			});
 			var currentFile = resolvePage(global.location.search);
 			navs.forEach(function (nav) {
 				var kind = nav.getAttribute('data-mdp-menu');
