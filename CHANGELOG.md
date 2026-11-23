@@ -7,7 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ### Added
 - `assets/vendor/showdown-forms/` — forms extension `@schreibtischhelden/showdown-forms` 1.0.0
-  (Git commit `ee19e5c` until it is published on npm), replaces the inline forms code
+  (Git commit `4620892` until it is published on npm), replaces the inline forms code;
+  the pinned commit includes the fixes for slow regexes on long form lines (CodeQL `js/polynomial-redos`)
 - `assets/vendor/` — third-party libraries stored in the repository, no external CDN requests anymore
 - `package.json`, `scripts/vendor.mjs` — library versions and script to regenerate `assets/vendor/`
 - `.github/dependabot.yml` — weekly updates for the vendored libraries and GitHub Actions
