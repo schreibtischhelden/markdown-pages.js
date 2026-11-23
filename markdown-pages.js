@@ -334,8 +334,17 @@
 	var MAX_DEPTH = 5;
 
 	function slug(text) {
-		return String(text).toLowerCase().trim()
-			.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+		var result = String(text).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+		// trim dashes without a regex (avoids polynomial backtracking on "----...")
+		var start = 0;
+		var end = result.length;
+		while (start < end && result.charAt(start) === '-') {
+			start++;
+		}
+		while (end > start && result.charAt(end - 1) === '-') {
+			end--;
+		}
+		return result.slice(start, end);
 	}
 
 	/** href of a menu item, or null if it has no valid target */

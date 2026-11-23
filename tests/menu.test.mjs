@@ -99,3 +99,9 @@ test('parseMenu throws on invalid menu.json so the fallback navigation is used',
 	const invalid = ['', '{ "main": [ broken', 'null', '[]', '{"main": "x"}', '{"menu": []}'];
 	invalid.forEach((text) => assert.throws(() => parseMenu(text), undefined, text));
 });
+
+test('ids are derived from titles without leading or trailing dashes', () => {
+	const result = normalizeMenu({ main: [{ title: '--- Über uns! ---', href: '.' }, { title: '-'.repeat(50000) + 'x', href: '.' }] });
+	assert.equal(result.main[0].id, 'ber-uns');
+	assert.equal(result.main[1].id, 'x');
+});
