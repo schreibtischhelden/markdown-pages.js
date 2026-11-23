@@ -23,6 +23,10 @@ const manifest = {
 		target: 'dompurify',
 		files: [['dist/purify.min.js', 'purify.min.js'], ['LICENSE', 'LICENSE']],
 	},
+	'@schreibtischhelden/showdown-forms': {
+		target: 'showdown-forms',
+		files: [['showdown-forms.js', 'showdown-forms.js'], ['LICENSE', 'LICENSE']],
+	},
 	'@highlightjs/cdn-assets': {
 		target: 'highlightjs',
 		files: [

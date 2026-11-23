@@ -1,16 +1,35 @@
-// Unit tests for the forms extension of markdown-pages.js.
+// Integration tests: markdown-pages.js with the vendored
+// @schreibtischhelden/showdown-forms package (assets/vendor/showdown-forms/).
+// The package has its own unit tests - these check that markdown-pages.js
+// wires it up with the expected options (ids, data attributes) and that the
+// security relevant behaviour holds for the vendored version.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../markdown-pages.js', import.meta.url), 'utf8');
+const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const sandbox = { URLSearchParams, URL };
 vm.createContext(sandbox);
-vm.runInContext(source, sandbox);
-const { renderForm, formsExtension } = sandbox.MarkdownPages;
+vm.runInContext(read('../assets/vendor/showdown-forms/showdown-forms.js'), sandbox);
+vm.runInContext(read('../markdown-pages.js'), sandbox);
+const { MarkdownPages, showdownForms } = sandbox;
+MarkdownPages.setupForms(showdownForms);
 
-test('renders all supported field types', () => {
+const filter = (markdown) => MarkdownPages.extensions.reduce((text, ext) => ext.filter(text), markdown);
+const render = (body, attributes = '') => showdownForms.render(body, { ...MarkdownPages.formsOptions, attributes, id: 'mdp-form-1' });
+
+test('setupForms registers the extension once with the markdown-pages options', () => {
+	// Act
+	MarkdownPages.setupForms(showdownForms);
+
+	// Assert
+	assert.equal(MarkdownPages.extensions.length, 1);
+	assert.equal(MarkdownPages.formsOptions.dataPrefix, 'mdp');
+	assert.equal(MarkdownPages.formsOptions.idPrefix, 'mdp-form');
+});
+
+test('renders all supported field types with mdp attributes', () => {
 	// Arrange
 	const body = [
 		'Name* = ___',
@@ -23,10 +42,10 @@ test('renders all supported field types', () => {
 	].join('\n');
 
 	// Act
-	const html = renderForm('', body);
+	const html = render(body);
 
 	// Assert
-	assert.match(html, /<input type="text" id="[^"]+" name="name" data-mdp-name="name" required>/);
+	assert.match(html, /<input type="text" id="mdp-form-1-0" name="name" data-mdp-name="name" required>/);
 	assert.match(html, /<input type="email"[^>]+name="e-mail"/);
 	assert.match(html, /<textarea [^>]*name="message"[^>]*rows="6"/);
 	assert.match(html, /<input type="radio"[^>]+value="e-mail" checked>/);
@@ -39,7 +58,7 @@ test('renders all supported field types', () => {
 
 test('escapes labels, options and unknown lines', () => {
 	// Act
-	const html = renderForm('', [
+	const html = render([
 		'Na<b>me = ___',
 		'X = {a"><script>alert(1)</script>, b}',
 		'Y = (x) <svg onload=alert(1)> () b',
@@ -65,7 +84,7 @@ test('keeps only safe action URLs and methods', async (t) => {
 	];
 	for (const [attrs, expected] of cases) {
 		await t.test(attrs, () => {
-			const html = renderForm(attrs, 'A = ___');
+			const html = render('A = ___', attrs);
 			if (expected) {
 				assert.ok(html.includes(expected), html);
 			} else {
@@ -74,24 +93,25 @@ test('keeps only safe action URLs and methods', async (t) => {
 			}
 		});
 	}
-	assert.match(renderForm('method="DELETE"', 'A = ___'), /method="post"/);
-	assert.match(renderForm('method="get"', 'A = ___'), /method="get"/);
+	assert.match(render('A = ___', 'method="DELETE"'), /method="post"/);
+	assert.match(render('A = ___', 'method="get"'), /method="get"/);
 });
 
-test('the Showdown extension leaves fenced code blocks untouched', () => {
+test('the extension leaves fenced code blocks untouched and numbers forms per page', () => {
 	// Arrange
-	const markdown = '```text\n:::form\nA = ___\n:::\n```\n\n:::form\nB = ___\n:::\n';
+	const markdown = '```text\n:::form\nA = ___\n:::\n```\n\n:::form\nB = ___\n:::\n\n:::form\nC = ___\n:::\n';
 
 	// Act
-	const result = formsExtension.filter(markdown);
+	const result = filter(markdown);
 
 	// Assert
 	assert.ok(result.includes('```text\n:::form\nA = ___\n:::\n```'));
-	assert.match(result, /<form [^>]+>.*name="b"/);
-	assert.equal((result.match(/<form /g) || []).length, 1);
+	assert.match(result, /<form id="mdp-form-\d+"[^>]+>.*name="b"/);
+	assert.equal((result.match(/<form /g) || []).length, 2);
+	const ids = [...result.matchAll(/<form id="(mdp-form-\d+)"/g)].map((m) => m[1]);
+	assert.notEqual(ids[0], ids[1]);
 });
 
-test('the Showdown extension handles Windows line endings', () => {
-	const result = formsExtension.filter(':::form\r\nA = ___\r\n:::\r\n');
-	assert.match(result, /<form /);
+test('the extension handles Windows line endings', () => {
+	assert.match(filter(':::form\r\nA = ___\r\n:::\r\n'), /<form /);
 });

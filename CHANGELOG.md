@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 
 ### Added
+- `assets/vendor/showdown-forms/` — forms extension `@schreibtischhelden/showdown-forms` 1.0.0
+  (Git commit `ee19e5c` until it is published on npm), replaces the inline forms code
 - `assets/vendor/` — third-party libraries stored in the repository, no external CDN requests anymore
 - `package.json`, `scripts/vendor.mjs` — library versions and script to regenerate `assets/vendor/`
 - `.github/dependabot.yml` — weekly updates for the vendored libraries and GitHub Actions
@@ -18,7 +20,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   documented in `pages/menu.md`, `header.md` uses `{{menu:main}}`;
   `menu.json` is optional – if it is missing or invalid, the hand-written
   navigation marked with `data-mdp-menu-fallback` is used as before
-- Forms in Markdown (`:::form` blocks, syntax inspired by showdown-forms):
+- Forms in Markdown (`:::form` blocks, via [showdown-forms](https://github.com/schreibtischhelden/showdown-forms)):
   text/email/… inputs, textarea, radio buttons, checkboxes, select, submit button,
   required fields; all values HTML-escaped, `action` restricted to relative,
   `http(s):` and `mailto:` URLs; forms without `action` dispatch `mdp:form-submit`;
@@ -27,6 +29,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
   configurable `MarkdownPages.showdownOptions` and `MarkdownPages.sanitizeConfig`
 
 ### Changed
+- `markdown-pages.js` — `MarkdownPages.formsExtension` is now the extension array of showdown-forms
+  (available after the libraries are loaded), `MarkdownPages.renderForm` was removed –
+  use `showdownForms.render(body, MarkdownPages.formsOptions)`; new `MarkdownPages.formsOptions`
 - A missing page renders `404.md` (or a default message) instead of redirecting to the non-existent `404.html`
 - `assets/user-scripts.js` — highlighting and current-page marker run after rendering instead of fixed timeouts
 - Showdown updated from 1.9.1 to 2.1.0
