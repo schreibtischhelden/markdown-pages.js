@@ -12,7 +12,7 @@
 	"devDependencies": {
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@picocss/pico": "2.1.1",
-		"@schreibtischhelden/showdown-forms": "github:schreibtischhelden/showdown-forms#ee19e5c9ec4bf2b760e238545a094b98f98651e8",
+		"@schreibtischhelden/showdown-forms": "github:schreibtischhelden/showdown-forms#46208920f6b60920b09627f5f92879be71051a8a",
 		"dompurify": "3.5.0",
 		"showdown": "2.1.0"
 	}
