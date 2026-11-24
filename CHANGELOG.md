@@ -5,6 +5,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-24
+
+First release of the schreibtischhelden fork, based on upstream v1.0.6.
+
+**Upgrading from 1.x** – breaking changes:
+- Pico CSS 2 renamed its CSS variables (`--primary` → `--pico-primary`, `--font-size` → `--pico-font-size`).
+- HTML in Markdown is sanitized: `<script>`, `<style>`, `<iframe>`, `onclick` & co. are removed;
+  move JavaScript into script files and listen to `mdp:rendered`.
+- Pages may only use relative paths (`?page=name`, `?folder=name`); URLs, `..` and hidden files are rejected.
+- A missing page shows `404.md` or a default message instead of redirecting to `404.html`.
+- Libraries are loaded from `assets/vendor/` next to `markdown-pages.js` – copy the folder along.
+
 ### Added
 - Documentation site in the style of MkDocs Material / docs.paperless-ngx.com, published with GitHub Pages:
   `assets/docs.css`, `assets/docs.js` (top bar with search, sidebar navigation, table of contents,
@@ -60,3 +72,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 - `assets/user-scripts.js` — dark/light toggle uses an event listener instead of inline `onclick`
   (inline handlers are removed by the sanitizer and blocked by the CSP)
 - `SECURITY.md` — threat model, protections and deployment recommendations
+
+[Unreleased]: https://github.com/schreibtischhelden/markdown-pages.js/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/schreibtischhelden/markdown-pages.js/compare/v1.0.6...v2.0.0
