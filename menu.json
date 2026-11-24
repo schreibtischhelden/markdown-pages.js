@@ -23,7 +23,7 @@
 			"children": [
 				{ "title": "JavaScript API", "page": "api" },
 				{ "title": "Security", "href": "?SECURITY" },
-				{ "title": "Changelog", "href": "?CHANGELOG" }
+				{ "title": "Releases", "href": "https://github.com/schreibtischhelden/markdown-pages.js/releases" }
 			]
 		},
 		{

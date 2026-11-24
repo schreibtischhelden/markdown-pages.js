@@ -45,7 +45,7 @@ markdown-pages.js turns a folder of Markdown files into a website – without a 
 
 ### Alternative: load from a CDN
 
-Every release is tagged (current: `v2.0.0`, see [Changelog](?CHANGELOG)), so the files can also be loaded from jsDelivr instead of copying them. The libraries are then loaded from the same CDN folder:
+Every release is tagged (current: `v2.0.0`, see [Releases](https://github.com/schreibtischhelden/markdown-pages.js/releases)), so the files can also be loaded from jsDelivr instead of copying them. The libraries are then loaded from the same CDN folder:
 
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/assets/user-styles.css">

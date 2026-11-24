@@ -53,6 +53,7 @@ The tests cover page resolution and path validation, menu handling, heading ids 
 | `CI` | `npm test` |
 | `Dependencies` | Vendor sync / check, see above |
 | `CodeQL` | Security analysis of JavaScript and workflows (weekly and on every pull request) |
+| `Release` | On a `v*` tag: tests, then a GitHub release with notes from the commit messages |
 
 All actions are pinned to commit SHAs; Dependabot keeps them up to date.
 
@@ -60,14 +61,15 @@ All actions are pinned to commit SHAs; Dependabot keeps them up to date.
 
 Versions follow [Semantic Versioning](https://semver.org/): `fix` → patch, `feat` → minor, breaking changes → major (upstream ended at `v1.0.6`, this fork starts at `v2.0.0`).
 
-1. Rename `[Unreleased]` in `CHANGELOG.md` to `[x.y.z] - YYYY-MM-DD`, add a new empty `[Unreleased]` and update the compare links at the bottom.
-2. Set `"version"` in `package.json`.
-3. Merge, then tag the merge commit `vx.y.z` and create a GitHub release with the changelog section as notes.
+1. Set `"version"` in `package.json` (commit `chore(release): x.y.z`) and merge.
+2. Tag the merge commit and push the tag: `git tag vx.y.z && git push origin vx.y.z`.
+3. The `Release` workflow runs the tests and creates the GitHub release. Its notes are generated from the commit messages since the previous tag, grouped by type – `npm run release-notes` shows them locally.
+
+There is no changelog file: the commit messages are the changelog, so write them for the readers of the release notes.
 
 Update version tags in CDN examples (quick start) on each release.
 
 ## Contributing
 
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat(menu): …`, `fix(security): …`).
-- Every change gets an entry under `[Unreleased]` in [CHANGELOG.md](?CHANGELOG).
 - Report security issues privately, see [Security](?SECURITY).
