@@ -56,6 +56,16 @@ The tests cover page resolution and path validation, menu handling, heading ids 
 
 All actions are pinned to commit SHAs; Dependabot keeps them up to date.
 
+## Releases
+
+Versions follow [Semantic Versioning](https://semver.org/): `fix` → patch, `feat` → minor, breaking changes → major (upstream ended at `v1.0.6`, this fork starts at `v2.0.0`).
+
+1. Rename `[Unreleased]` in `CHANGELOG.md` to `[x.y.z] - YYYY-MM-DD`, add a new empty `[Unreleased]` and update the compare links at the bottom.
+2. Set `"version"` in `package.json`.
+3. Merge, then tag the merge commit `vx.y.z` and create a GitHub release with the changelog section as notes.
+
+Update version tags in CDN examples (quick start) on each release.
+
 ## Contributing
 
 - Commit messages follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat(menu): …`, `fix(security): …`).

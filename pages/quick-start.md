@@ -43,6 +43,19 @@ markdown-pages.js turns a folder of Markdown files into a website – without a 
 
 `markdown-pages.js` loads its libraries from `assets/vendor/` **relative to its own location**, so keep both together.
 
+### Alternative: load from a CDN
+
+Every release is tagged (current: `v2.0.0`, see [Changelog](?CHANGELOG)), so the files can also be loaded from jsDelivr instead of copying them. The libraries are then loaded from the same CDN folder:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/assets/user-styles.css">
+<script src="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/markdown-pages.js"></script>
+<!-- at the end of <body>: -->
+<script src="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/assets/user-scripts.js"></script>
+```
+
+Always use a fixed version tag, never a branch. With a Content Security Policy, allow the CDN: `script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net`. Your Markdown files, `menu.json` etc. are still loaded from your own site.
+
 ## 3. Write content
 
 Put the home page into `README.md` and further pages into `pages/`:
