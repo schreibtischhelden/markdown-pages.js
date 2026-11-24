@@ -59,6 +59,10 @@ First release of the schreibtischhelden fork, based on upstream v1.0.6.
   `assets/user-styles.css` uses the new `--pico-*` variables;
   content width on wide screens kept at the previous 1130px
 
+### Fixed
+- `...` in links (e.g. GitHub compare URLs) was turned into `…` by Showdown and broke the link;
+  the Showdown option `ellipsis` is now off
+
 ### Security
 - `markdown-pages.js` — the query string can no longer load Markdown from other hosts
   (e.g. `?//attacker.example/x`), which allowed cross-site scripting;

@@ -82,6 +82,8 @@
 		strikethrough: true,
 		tasklists: true,
 		parseImgDimensions: true,
+		// keep "..." as typed - Showdown would also turn it into "…" inside link URLs
+		ellipsis: false,
 	};
 
 	// Showdown extensions (by name) registered by add-ons, e.g. forms

@@ -32,6 +32,7 @@ MarkdownPages.showdownOptions = {
   strikethrough: true,
   tasklists: true,
   parseImgDimensions: true,
+  ellipsis: false, // keeps "..." in text and link URLs
 };
 ```
 
