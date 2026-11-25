@@ -67,8 +67,25 @@
 		return isSafePath(path) ? path + '.md' : null;
 	}
 
+	/**
+	 * File that is fetched for a resolved page. The home page is addressed
+	 * as "README.md" everywhere (events, menus); only the fetch uses
+	 * MarkdownPages.homeUrl, e.g. "profile/README.md" from a git submodule.
+	 * An unsafe homeUrl falls back to README.md.
+	 */
+	function pageSource(page, homeUrl) {
+		if (page !== 'README.md' || homeUrl === undefined || homeUrl === 'README.md') {
+			return page;
+		}
+		return isSafePath(homeUrl) && homeUrl.slice(-3) === '.md' ? homeUrl : 'README.md';
+	}
+
 	MarkdownPages.isSafePath = isSafePath;
 	MarkdownPages.resolvePage = resolvePage;
+	MarkdownPages.pageSource = pageSource;
+
+	/** Markdown file of the home page, relative to index.html */
+	MarkdownPages.homeUrl = 'README.md';
 
 	// ---------------------------------------------------------------------
 	// Conversion + sanitizing
@@ -593,7 +610,7 @@
 	}
 
 	function renderMain(page) {
-		var request = page ? fetchText(page) : Promise.resolve(null);
+		var request = page ? fetchText(pageSource(page, MarkdownPages.homeUrl)) : Promise.resolve(null);
 		return request.then(function (markdown) {
 			if (markdown !== null) {
 				return markdown;

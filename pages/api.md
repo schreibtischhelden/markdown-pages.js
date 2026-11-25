@@ -11,6 +11,7 @@
 | `sanitizeConfig` | `{ ADD_ATTR: ['target'], FORBID_TAGS: ['style'] }` | Extra [DOMPurify settings](https://github.com/cure53/DOMPurify#can-i-configure-dompurify) – e.g. `ADD_TAGS: ['iframe']` for trusted embeds |
 | `extensions` | forms extension | Showdown extensions (objects) used for every conversion |
 | `menuUrl` | `'menu.json'` | Location of the menu file |
+| `homeUrl` | `'README.md'` | Markdown file of the home page, relative to `index.html` – e.g. `'profile/README.md'` to show a README from a git submodule. Must be a relative `.md` path without `..`, otherwise `README.md` is used. Links and images in that file are still resolved relative to `index.html` |
 | `formsOptions` | `{ idPrefix: 'mdp-form', dataPrefix: 'mdp' }` | Options for [showdown-forms](https://github.com/schreibtischhelden/showdown-forms) |
 
 ```javascript
