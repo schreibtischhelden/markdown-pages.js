@@ -10,7 +10,7 @@ const source = readFileSync(new URL('../markdown-pages.js', import.meta.url), 'u
 const sandbox = { URLSearchParams, URL };
 vm.createContext(sandbox);
 vm.runInContext(source, sandbox);
-const { resolvePage, isSafePath } = sandbox.MarkdownPages;
+const { resolvePage, isSafePath, pageSource } = sandbox.MarkdownPages;
 
 test('resolvePage maps the query string to Markdown files', async (t) => {
 	const cases = [
@@ -77,4 +77,30 @@ test('isSafeHeadingId keeps generated heading ids except reserved library global
 	['hljs', 'HLJS', 'showdown', 'DOMPurify', 'markdownpages', '', '-x', 'a b', 'a"b', 'x'.repeat(101), null].forEach((id) => {
 		assert.equal(isSafeHeadingId(id), false, String(id));
 	});
+});
+
+test('pageSource fetches the home page from homeUrl', async (t) => {
+	const cases = [
+		['README.md', 'README.md', 'README.md'],
+		['README.md', undefined, 'README.md'],
+		['README.md', 'profile/README.md', 'profile/README.md'],
+		['README.md', 'home.md', 'home.md'],
+		['pages/about.md', 'profile/README.md', 'pages/about.md'],
+	];
+	for (const [page, homeUrl, expected] of cases) {
+		await t.test(`${page} with ${homeUrl}`, () => {
+			// Act + Assert
+			assert.equal(pageSource(page, homeUrl), expected);
+		});
+	}
+});
+
+test('pageSource falls back to README.md for unsafe homeUrl values', async (t) => {
+	const unsafe = ['../README.md', '//evil.example/x.md', 'https://evil.example/x.md', '.git/config.md', 'profile/README', '', null, 42];
+	for (const homeUrl of unsafe) {
+		await t.test(String(homeUrl), () => {
+			// Act + Assert
+			assert.equal(pageSource('README.md', homeUrl), 'README.md');
+		});
+	}
 });
