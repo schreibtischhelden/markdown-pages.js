@@ -210,7 +210,7 @@
 	MarkdownPages.setupForms = setupForms;
 
 	// ---------------------------------------------------------------------
-	// Editor - optional, provided by @schreibtischhelden/markdown-editor
+	// Editor - optional, provided by @schreibtischhelden/markdown-pages-editor
 	// (vendored, but only loaded when the page includes it)
 	// ---------------------------------------------------------------------
 
@@ -218,13 +218,13 @@
 	MarkdownPages.editorOptions = {};
 
 	/**
-	 * Creates a markdown-editor whose preview is rendered like the site:
+	 * Creates a markdown-pages-editor whose preview is rendered like the site:
 	 * toHtml (Showdown + DOMPurify + forms) and menu placeholders.
-	 * Needs assets/vendor/markdown-editor/markdown-editor.js.
+	 * Needs assets/vendor/markdown-pages-editor/markdown-pages-editor.js.
 	 */
 	function createEditor(target, options) {
-		if (typeof global.markdownEditor !== 'function') {
-			throw new Error('markdown-pages.js: load assets/vendor/markdown-editor/markdown-editor.js to use MarkdownPages.editor()');
+		if (typeof global.markdownPagesEditor !== 'function') {
+			throw new Error('markdown-pages.js: load assets/vendor/markdown-pages-editor/markdown-pages-editor.js to use MarkdownPages.editor()');
 		}
 		var merged = {};
 		[MarkdownPages.editorOptions, options || {}].forEach(function (source) {
@@ -248,7 +248,7 @@
 				return typeof afterRender === 'function' ? afterRender(element, editor) : null;
 			});
 		};
-		return global.markdownEditor(target, merged);
+		return global.markdownPagesEditor(target, merged);
 	}
 
 	MarkdownPages.editor = createEditor;

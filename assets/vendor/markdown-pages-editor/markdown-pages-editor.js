@@ -1,6 +1,6 @@
 /*!
- * markdown-editor - lightweight, configurable Markdown editor with live preview
- * https://github.com/schreibtischhelden/markdown-editor
+ * markdown-pages-editor - lightweight, configurable Markdown editor with live preview
+ * https://github.com/schreibtischhelden/markdown-pages-editor
  * MIT License
  *
  * A <textarea> with a toolbar and an optional preview. It has no
@@ -14,7 +14,7 @@
 	} else if (typeof define === 'function' && define.amd) {
 		define([], factory);
 	} else {
-		root.markdownEditor = factory();
+		root.markdownPagesEditor = factory();
 	}
 })(typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
@@ -359,7 +359,7 @@
 	 *   still works in forms) or a container the editor is appended to
 	 * @param {object} [options] see README
 	 */
-	function markdownEditor(target, options) {
+	function markdownPagesEditor(target, options) {
 		options = options || {};
 		var config = resolveOptions(options);
 		var labels = {};
@@ -372,28 +372,28 @@
 		Object.keys(options.labels || {}).forEach(function (key) {
 			labels[key] = options.labels[key];
 		});
-		var id = 'markdown-editor-' + (++counter);
+		var id = 'markdown-pages-editor-' + (++counter);
 
 		var isTextarea = target.tagName === 'TEXTAREA';
-		var root = element('div', 'markdown-editor');
+		var root = element('div', 'markdown-pages-editor');
 		var input = isTextarea ? target : element('textarea', '', { 'aria-label': labels.input });
 		if (isTextarea) {
 			target.parentNode.insertBefore(root, target);
 		} else {
 			target.appendChild(root);
 		}
-		input.classList.add('markdown-editor-input');
+		input.classList.add('markdown-pages-editor-input');
 		input.id = input.id || id + '-input';
 
-		var toolbar = element('div', 'markdown-editor-toolbar', { role: 'toolbar', 'aria-label': labels.toolbar, 'aria-controls': input.id });
-		var format = element('div', 'markdown-editor-format');
+		var toolbar = element('div', 'markdown-pages-editor-toolbar', { role: 'toolbar', 'aria-label': labels.toolbar, 'aria-controls': input.id });
+		var format = element('div', 'markdown-pages-editor-format');
 		config.toolbar.forEach(function (name) {
 			if (name === '|') {
-				format.appendChild(element('span', 'markdown-editor-separator', { 'aria-hidden': 'true' }));
+				format.appendChild(element('span', 'markdown-pages-editor-separator', { 'aria-hidden': 'true' }));
 				return;
 			}
 			var command = config.commands[name];
-			var node = button('markdown-editor-button markdown-editor-' + name, command.text || labels[name], labels[name]);
+			var node = button('markdown-pages-editor-button markdown-pages-editor-' + name, command.text || labels[name], labels[name]);
 			node.setAttribute('data-command', name);
 			format.appendChild(node);
 		});
@@ -403,9 +403,9 @@
 
 		var modeButtons = {};
 		if (config.modes.length > 1) {
-			var switcher = element('div', 'markdown-editor-modes');
+			var switcher = element('div', 'markdown-pages-editor-modes');
 			config.modes.forEach(function (name) {
-				var node = button('markdown-editor-mode', labels[name]);
+				var node = button('markdown-pages-editor-mode', labels[name]);
 				node.setAttribute('data-mode', name);
 				modeButtons[name] = node;
 				switcher.appendChild(node);
@@ -414,12 +414,12 @@
 		}
 		var downloadButton = null;
 		if (config.download) {
-			downloadButton = button('markdown-editor-download', labels.download);
+			downloadButton = button('markdown-pages-editor-download', labels.download);
 			toolbar.appendChild(downloadButton);
 		}
 
-		var panes = element('div', 'markdown-editor-panes');
-		var preview = element('div', 'markdown-editor-preview', { role: 'region', 'aria-label': labels.preview, 'aria-live': 'polite' });
+		var panes = element('div', 'markdown-pages-editor-panes');
+		var preview = element('div', 'markdown-pages-editor-preview', { role: 'region', 'aria-label': labels.preview, 'aria-live': 'polite' });
 		if (toolbar.childNodes.length) {
 			root.appendChild(toolbar);
 		}
@@ -497,7 +497,7 @@
 				}
 				if (!markdown.trim()) {
 					preview.innerHTML = '';
-					var hint = element('p', 'markdown-editor-empty');
+					var hint = element('p', 'markdown-pages-editor-empty');
 					hint.textContent = labels.empty;
 					preview.appendChild(hint);
 				} else if (typeof html === 'string') {
@@ -512,9 +512,9 @@
 				if (options.prefixIds !== false) {
 					prefixIds(preview, id + '-');
 				}
-				preview.dispatchEvent(new CustomEvent('markdown-editor:preview', { bubbles: true, detail: { editor: api } }));
+				preview.dispatchEvent(new CustomEvent('markdown-pages-editor:preview', { bubbles: true, detail: { editor: api } }));
 			}).catch(function (error) {
-				console.error('markdown-editor:', error);
+				console.error('markdown-pages-editor:', error);
 			});
 		}
 
@@ -624,7 +624,7 @@
 			input.removeEventListener('input', changed);
 			input.removeEventListener('keydown', onKeyDown);
 			if (isTextarea) {
-				input.classList.remove('markdown-editor-input');
+				input.classList.remove('markdown-pages-editor-input');
 				input.hidden = false;
 				root.parentNode.insertBefore(input, root);
 			}
@@ -635,15 +635,15 @@
 		return api;
 	}
 
-	markdownEditor.commands = COMMANDS;
-	markdownEditor.labels = LABELS;
-	markdownEditor.defaultToolbar = DEFAULT_TOOLBAR;
-	markdownEditor.resolveOptions = resolveOptions;
-	markdownEditor.applyEdit = applyEdit;
-	markdownEditor.safeFileName = safeFileName;
-	markdownEditor.prefixIds = prefixIds;
-	markdownEditor.helpers = { wrap: wrap, prefixLines: prefixLines, editLines: editLines };
-	markdownEditor.default = markdownEditor;
+	markdownPagesEditor.commands = COMMANDS;
+	markdownPagesEditor.labels = LABELS;
+	markdownPagesEditor.defaultToolbar = DEFAULT_TOOLBAR;
+	markdownPagesEditor.resolveOptions = resolveOptions;
+	markdownPagesEditor.applyEdit = applyEdit;
+	markdownPagesEditor.safeFileName = safeFileName;
+	markdownPagesEditor.prefixIds = prefixIds;
+	markdownPagesEditor.helpers = { wrap: wrap, prefixLines: prefixLines, editLines: editLines };
+	markdownPagesEditor.default = markdownPagesEditor;
 
-	return markdownEditor;
+	return markdownPagesEditor;
 });

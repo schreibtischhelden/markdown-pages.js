@@ -1,5 +1,5 @@
 // Integration tests: MarkdownPages.editor() with the vendored
-// @schreibtischhelden/markdown-editor package (assets/vendor/markdown-editor/).
+// @schreibtischhelden/markdown-pages-editor package (assets/vendor/markdown-pages-editor/).
 // The package has its own unit tests - these check that markdown-pages.js
 // passes the site renderer and the defaults on.
 import { test } from 'node:test';
@@ -13,7 +13,7 @@ function load({ withEditor }) {
 	const sandbox = { URLSearchParams, URL };
 	vm.createContext(sandbox);
 	if (withEditor) {
-		vm.runInContext(read('../assets/vendor/markdown-editor/markdown-editor.js'), sandbox);
+		vm.runInContext(read('../assets/vendor/markdown-pages-editor/markdown-pages-editor.js'), sandbox);
 	}
 	vm.runInContext(read('../markdown-pages.js'), sandbox);
 	return sandbox;
@@ -21,12 +21,12 @@ function load({ withEditor }) {
 
 test('the vendored package is loadable and exposes the editor API', () => {
 	// Act
-	const { markdownEditor } = load({ withEditor: true });
+	const { markdownPagesEditor } = load({ withEditor: true });
 
 	// Assert
-	assert.equal(typeof markdownEditor, 'function');
-	assert.equal(typeof markdownEditor.resolveOptions, 'function');
-	assert.ok(markdownEditor.defaultToolbar.includes('bold'));
+	assert.equal(typeof markdownPagesEditor, 'function');
+	assert.equal(typeof markdownPagesEditor.resolveOptions, 'function');
+	assert.ok(markdownPagesEditor.defaultToolbar.includes('bold'));
 });
 
 test('editor() explains which file is missing', () => {
@@ -34,14 +34,14 @@ test('editor() explains which file is missing', () => {
 	const { MarkdownPages } = load({ withEditor: false });
 
 	// Act + Assert
-	assert.throws(() => MarkdownPages.editor({}), /assets\/vendor\/markdown-editor\/markdown-editor\.js/);
+	assert.throws(() => MarkdownPages.editor({}), /assets\/vendor\/markdown-pages-editor\/markdown-pages-editor\.js/);
 });
 
 test('editor() merges editorOptions and uses the site renderer', async () => {
 	// Arrange
 	const sandbox = load({ withEditor: true });
 	let received;
-	sandbox.markdownEditor = (target, options) => {
+	sandbox.markdownPagesEditor = (target, options) => {
 		received = options;
 		return {};
 	};
@@ -63,7 +63,7 @@ test('editor() keeps an own render function and still calls an own afterRender',
 	// Arrange
 	const sandbox = load({ withEditor: true });
 	let received;
-	sandbox.markdownEditor = (target, options) => {
+	sandbox.markdownPagesEditor = (target, options) => {
 		received = options;
 		return {};
 	};

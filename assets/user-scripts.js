@@ -127,7 +127,7 @@ document.addEventListener('mdp:form-submit', function (event) {
 	output.textContent = 'Submitted (not sent anywhere) – ' + values.join(', ');
 });
 
-// demo for pages/editor.md: a Markdown editor (needs assets/vendor/markdown-editor/markdown-editor.js)
+// demo for pages/editor.md: a Markdown editor (needs assets/vendor/markdown-pages-editor/markdown-pages-editor.js)
 document.addEventListener('mdp:rendered', function (event) {
 	var container = document.getElementById('editor-demo');
 	if (event.detail.region !== 'main' || !container || !window.MarkdownPages.editor) {
@@ -140,4 +140,4 @@ document.addEventListener('mdp:rendered', function (event) {
 });
 
 // highlight code blocks in editor previews
-document.addEventListener('markdown-editor:preview', highlightCode);
+document.addEventListener('markdown-pages-editor:preview', highlightCode);

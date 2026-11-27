@@ -20,7 +20,7 @@
 | [Showdown](https://showdownjs.com/) | Markdown → HTML | `assets/vendor/showdown/` |
 | [DOMPurify](https://github.com/cure53/DOMPurify) | Sanitizing the generated HTML | `assets/vendor/dompurify/` |
 | [showdown-forms](https://github.com/schreibtischhelden/showdown-forms) | Forms (`:::form`) | `assets/vendor/showdown-forms/` |
-| [markdown-editor](https://github.com/schreibtischhelden/markdown-editor) | Optional editor (only loaded where included) | `assets/vendor/markdown-editor/` |
+| [markdown-pages-editor](https://github.com/schreibtischhelden/markdown-pages-editor) | Optional editor (only loaded where included) | `assets/vendor/markdown-pages-editor/` |
 | [Pico CSS](https://picocss.com/) | Base styles | `assets/vendor/pico/` |
 | [highlight.js](https://highlightjs.org/) | Syntax highlighting | `assets/vendor/highlightjs/` |
 

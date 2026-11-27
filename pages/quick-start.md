@@ -13,7 +13,7 @@ markdown-pages.js turns a folder of Markdown files into a website – without a 
 | :--- | :--- |
 | `index.html` | The only HTML page – loads everything else |
 | `markdown-pages.js` | Fetches, converts, sanitizes and renders the Markdown |
-| `assets/vendor/` | Showdown, DOMPurify, showdown-forms, markdown-editor, highlight.js, Pico CSS – no CDN needed |
+| `assets/vendor/` | Showdown, DOMPurify, showdown-forms, markdown-pages-editor, highlight.js, Pico CSS – no CDN needed |
 | `README.md` | Content of the home page |
 | `header.md`, `footer.md` | Optional header and footer |
 | `pages/*.md` | Further pages, linked as `?page=name` |
