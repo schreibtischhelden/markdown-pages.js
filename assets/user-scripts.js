@@ -126,3 +126,18 @@ document.addEventListener('mdp:form-submit', function (event) {
 	});
 	output.textContent = 'Submitted (not sent anywhere) – ' + values.join(', ');
 });
+
+// demo for pages/editor.md: a Markdown editor (needs markdown-pages-editor.js)
+document.addEventListener('mdp:rendered', function (event) {
+	var container = document.getElementById('editor-demo');
+	if (event.detail.region !== 'main' || !container || !window.MarkdownPages.editor) {
+		return;
+	}
+	window.MarkdownPages.editor(container, {
+		fileName: 'example.md',
+		value: '# Example page\n\nWrite **Markdown** here – the preview on the right is rendered like this site.\n\n- [ ] a task\n- a [link](?page=quick-start)\n\n```js\nconsole.log("hello");\n```\n\n:::form\nName = ___\n[[ Send ]]\n:::\n',
+	});
+});
+
+// highlight code blocks in editor previews
+document.addEventListener('mdp:editor-preview', highlightCode);

@@ -44,7 +44,7 @@ Node.js is only needed for updates and tests – the site itself has no build st
 npm test
 ```
 
-The tests cover page resolution and path validation, menu handling, heading ids and the forms integration. They need no dependencies.
+The tests cover page resolution and path validation, menu handling, heading ids, the forms integration and the editor commands. They need no dependencies.
 
 ## Continuous integration
 
