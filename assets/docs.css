@@ -1,8 +1,8 @@
 /*
  * Documentation theme for markdown-pages.js
  * Layout inspired by documentation sites like docs.paperless-ngx.com
- * (MkDocs Material): top bar with search, navigation on the left,
- * table of contents on the right, previous/next links below the content.
+ * (MkDocs Material): top bar with search, navigation on the left with the
+ * sections of the current page, previous/next links below the content.
  * Builds on Pico CSS + assets/user-styles.css and follows their light/dark theme.
  */
 
@@ -11,7 +11,6 @@
     --docs-primary-contrast: #ffffff;
     --docs-header-height: 56px;
     --docs-sidebar-width: 260px;
-    --docs-toc-width: 230px;
     --docs-content-width: 820px;
 }
 
@@ -219,7 +218,7 @@ body > header.docs-header {
 .docs-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: var(--docs-sidebar-width) minmax(0, 1fr) var(--docs-toc-width);
+    grid-template-columns: var(--docs-sidebar-width) minmax(0, 1fr);
     gap: 40px;
     width: 100%;
     max-width: 1440px;
@@ -227,7 +226,7 @@ body > header.docs-header {
     padding: 0 24px;
 }
 
-.docs-sidebar, .docs-toc-column {
+.docs-sidebar {
     position: sticky;
     top: var(--docs-header-height);
     align-self: start;
@@ -309,56 +308,36 @@ body > header.docs-header {
     color: #7fd3ee;
 }
 
-/* ------------------------------------------------------------------ toc */
+/* ------------------------------- sections of the current page (sidebar) */
 
-.docs-toc-title {
-    margin: 0 0 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--pico-muted-color);
-}
-
-.docs-toc-column .mdp-toc ul {
-    margin: 0;
-    padding: 0;
+.docs-sidebar .mdp-menu-tree ul.mdp-menu-toc {
+    margin: 2px 0 6px 10px;
+    padding-left: 0;
     border-left: 2px solid var(--pico-muted-border-color);
 }
 
-.docs-toc-column .mdp-toc ul ul {
-    border-left: 0;
+.docs-sidebar .mdp-menu-tree ul.mdp-menu-toc ul {
     padding-left: 12px;
 }
 
-.docs-toc-column .mdp-toc li {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.docs-toc-column .mdp-toc a {
-    display: block;
+.docs-sidebar .mdp-menu-tree .mdp-menu-toc li a {
     margin-left: -2px;
-    padding: 3px 0 3px 12px;
+    padding: 3px 10px 3px 12px;
     border-left: 2px solid transparent;
+    border-radius: 0;
     color: var(--pico-muted-color);
-    text-decoration: none;
-    line-height: 1.4;
+    font-size: 0.8rem;
 }
 
-.docs-toc-column .mdp-toc a:hover {
+.docs-sidebar .mdp-menu-tree .mdp-menu-toc li a:hover {
     color: var(--pico-color);
+    background: none;
 }
 
-.docs-toc-column .mdp-toc a.docs-toc-active {
+.docs-sidebar .mdp-menu-tree .mdp-menu-toc a.docs-toc-active {
     border-left-color: var(--docs-primary);
     color: var(--pico-color);
     font-weight: 600;
-}
-
-.docs-toc-column .mdp-toc[hidden] + * {
-    display: none;
 }
 
 /* -------------------------------------------------------------- content */
@@ -464,16 +443,6 @@ body > footer p {
 }
 
 /* ------------------------------------------------------------ responsive */
-
-@media (max-width: 1199px) {
-    .docs-layout {
-        grid-template-columns: var(--docs-sidebar-width) minmax(0, 1fr);
-    }
-
-    .docs-toc-column {
-        display: none;
-    }
-}
 
 @media (max-width: 959px) {
     .docs-layout {

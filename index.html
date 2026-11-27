@@ -12,7 +12,7 @@
 	<title>markdown-pages.js</title>
 	<link rel="shortcut icon" type="image/png" href="assets/images/favicon.png"/>
 	<link rel="stylesheet" href="assets/user-styles.css" />
-	<!-- optional documentation theme (top bar, sidebar, table of contents, search) -->
+	<!-- optional documentation theme (top bar, sidebar with the sections of the current page, search) -->
 	<link rel="stylesheet" href="assets/docs.css" />
 	<!---- adding markdown-page.js file ---->
 	<script src="markdown-pages.js"></script>
@@ -22,16 +22,12 @@
 	<header class="docs-header"></header>
 	<div class="docs-layout">
 		<aside class="docs-sidebar" id="docs-sidebar">
-			<nav data-mdp-menu="tree" aria-label="Documentation"></nav>
+			<nav data-mdp-menu="tree" data-mdp-menu-toc aria-label="Documentation"></nav>
 		</aside>
 		<div class="docs-content">
 			<main></main>
 			<nav class="docs-pager" aria-label="Previous and next page"></nav>
 		</div>
-		<aside class="docs-toc-column">
-			<p class="docs-toc-title" aria-hidden="true">On this page</p>
-			<nav data-mdp-toc aria-label="On this page"></nav>
-		</aside>
 	</div>
 	<footer></footer>
 	<script src="assets/user-scripts.js"></script>
