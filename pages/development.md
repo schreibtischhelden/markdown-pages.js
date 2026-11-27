@@ -20,6 +20,7 @@
 | [Showdown](https://showdownjs.com/) | Markdown → HTML | `assets/vendor/showdown/` |
 | [DOMPurify](https://github.com/cure53/DOMPurify) | Sanitizing the generated HTML | `assets/vendor/dompurify/` |
 | [showdown-forms](https://github.com/schreibtischhelden/showdown-forms) | Forms (`:::form`) | `assets/vendor/showdown-forms/` |
+| [markdown-pages-editor](https://github.com/schreibtischhelden/markdown-pages-editor) | Optional editor (only loaded where included) | `assets/vendor/markdown-pages-editor/` |
 | [Pico CSS](https://picocss.com/) | Base styles | `assets/vendor/pico/` |
 | [highlight.js](https://highlightjs.org/) | Syntax highlighting | `assets/vendor/highlightjs/` |
 
@@ -44,7 +45,7 @@ Node.js is only needed for updates and tests – the site itself has no build st
 npm test
 ```
 
-The tests cover page resolution and path validation, menu handling, heading ids and the forms integration. They need no dependencies.
+The tests cover page resolution and path validation, menu handling, heading ids and the forms and editor integration. They need no dependencies.
 
 ## Continuous integration
 

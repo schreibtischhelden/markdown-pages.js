@@ -16,6 +16,7 @@ Use **markdown-pages.js** to create simple websites from [Markdown](https://www.
 - **Secure by default** – page paths are validated, all HTML is sanitized with DOMPurify, a Content Security Policy is included
 - **Navigation from JSON** – define the menu once in `menu.json`, insert it with `{{menu:main}}`, `{{menu:tree}}`, `{{menu:sub:<id>}}`, `{{menu:current}}`; plus `{{toc}}` for a table of contents
 - **Forms in Markdown** – `:::form` blocks via [showdown-forms](https://github.com/schreibtischhelden/showdown-forms)
+- **Markdown editor** – optional, configurable editor with live preview rendered like the site, via [markdown-pages-editor](https://github.com/schreibtischhelden/markdown-pages-editor); the text can be downloaded as `.md`
 - **Documentation theme** – optional layout with sidebar, search, table of contents and previous/next links (used for the documentation)
 - **Dark/light mode** and syntax highlighting as optional example scripts
 
@@ -45,7 +46,7 @@ Fork this repository (or copy `index.html`, `markdown-pages.js` and `assets/`), 
 | | |
 | :--- | :--- |
 | **Getting started** | [Quick start](?page=quick-start) · [Deployment](?page=deployment) · [Use in other projects](?page=use-in-projects) |
-| **Usage** | [Writing pages](?page=writing-pages) · [Menu](?page=menu) · [Forms](?page=forms) · [Styles & scripts](?page=theming) · [Markdown showcase](?page=sample-page) |
+| **Usage** | [Writing pages](?page=writing-pages) · [Menu](?page=menu) · [Forms](?page=forms) · [Editor](?page=editor) · [Styles & scripts](?page=theming) · [Markdown showcase](?page=sample-page) |
 | **Reference** | [JavaScript API](?page=api) · [Security](?SECURITY) · [Releases](https://github.com/schreibtischhelden/markdown-pages.js/releases) |
 | **Project** | [Development](?page=development) |
 

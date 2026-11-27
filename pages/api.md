@@ -26,6 +26,7 @@ MarkdownPages.sanitizeConfig.ADD_TAGS = ['iframe'];
 | :--- | :--- | :--- |
 | `mdp:rendered` | `document` | `{ region, page }` – `region` is `'main'`, `'header'` or `'footer'`, `page` the file (`'pages/x.md'`); after a region was rendered (menus and table of contents included) |
 | `mdp:form-submit` | the form (bubbles) | `{ data: FormData }` – a form without `action` was submitted |
+| `markdown-pages-editor:preview` | the editor's preview element (bubbles) | `{ editor }` – the preview of an [editor](?page=editor) was updated |
 
 ## Properties and functions
 
@@ -45,6 +46,7 @@ MarkdownPages.sanitizeConfig.ADD_TAGS = ['iframe'];
 | `tocEntries(headings, root)`, `isHidden(element, root)` | Table of contents helpers: visible headings as nested `{ id, title, children }`, and whether an element or an ancestor below `root` is hidden |
 | `isSafeHeadingId(id)` | Whether a heading id is kept by the sanitizer hook |
 | `setupForms(showdownForms)`, `formsExtension` | Forms integration |
+| `editor(target, options)`, `editorOptions` | [Markdown editor](?page=editor) with a preview rendered like the site – needs `assets/vendor/markdown-pages-editor/markdown-pages-editor.js` |
 
 ## Example: open external links in a new tab
 

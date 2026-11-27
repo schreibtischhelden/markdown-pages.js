@@ -15,6 +15,7 @@
 				{ "title": "Writing pages", "page": "writing-pages" },
 				{ "title": "Menu", "page": "menu" },
 				{ "title": "Forms", "page": "forms" },
+				{ "title": "Editor", "page": "editor" },
 				{ "title": "Styles & scripts", "page": "theming" },
 				{ "title": "Markdown showcase", "page": "sample-page" }
 			]
