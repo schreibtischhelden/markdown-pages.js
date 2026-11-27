@@ -14,6 +14,7 @@
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@picocss/pico": "2.1.1",
 		"@schreibtischhelden/showdown-forms": "1.0.0",
+		"@schreibtischhelden/markdown-editor": "1.0.0",
 		"dompurify": "3.5.0",
 		"showdown": "2.1.0"
 	}

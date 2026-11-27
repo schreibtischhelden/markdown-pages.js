@@ -16,7 +16,7 @@ Use **markdown-pages.js** to create simple websites from [Markdown](https://www.
 - **Secure by default** – page paths are validated, all HTML is sanitized with DOMPurify, a Content Security Policy is included
 - **Navigation from JSON** – define the menu once in `menu.json`, insert it with `{{menu:main}}`, `{{menu:tree}}`, `{{menu:sub:<id>}}`, `{{menu:current}}`; plus `{{toc}}` for a table of contents
 - **Forms in Markdown** – `:::form` blocks via [showdown-forms](https://github.com/schreibtischhelden/showdown-forms)
-- **Markdown editor** – optional add-on with toolbar and live preview, rendered like the site; the text can be downloaded as `.md`
+- **Markdown editor** – optional, configurable editor with live preview rendered like the site, via [markdown-editor](https://github.com/schreibtischhelden/markdown-editor); the text can be downloaded as `.md`
 - **Documentation theme** – optional layout with sidebar, search, table of contents and previous/next links (used for the documentation)
 - **Dark/light mode** and syntax highlighting as optional example scripts
 

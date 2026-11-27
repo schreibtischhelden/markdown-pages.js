@@ -1,24 +1,23 @@
 /*!
- * markdown-pages-editor.js - optional, lightweight Markdown editor for
- * markdown-pages.js: a textarea with a small toolbar and a live preview that
- * is rendered exactly like the site (Showdown + DOMPurify + forms + menus).
- * No dependencies besides markdown-pages.js, nothing is sent anywhere -
- * the text can be downloaded as a .md file.
+ * markdown-editor - lightweight, configurable Markdown editor with live preview
+ * https://github.com/schreibtischhelden/markdown-editor
+ * MIT License
  *
- *   <link rel="stylesheet" href="markdown-pages-editor.css">
- *   <script src="markdown-pages.js"></script>
- *   <script src="markdown-pages-editor.js"></script>
- *
- *   var editor = MarkdownPages.editor(element, { value: '# Hello', fileName: 'hello.md' });
- *   editor.getValue();
- *
- * After each preview render a bubbling "mdp:editor-preview" event is
- * dispatched on the preview element (detail: { editor }).
+ * A <textarea> with a toolbar and an optional preview. It has no
+ * dependencies and does not convert Markdown itself: the preview uses the
+ * render function you pass (e.g. Showdown + DOMPurify), so it looks exactly
+ * like your site. Nothing is sent anywhere.
  */
-(function (global) {
+(function (root, factory) {
+	if (typeof module === 'object' && module.exports) {
+		module.exports = factory();
+	} else if (typeof define === 'function' && define.amd) {
+		define([], factory);
+	} else {
+		root.markdownEditor = factory();
+	}
+})(typeof self !== 'undefined' ? self : this, function () {
 	'use strict';
-
-	var MarkdownPages = global.MarkdownPages || (global.MarkdownPages = {});
 
 	// ---------------------------------------------------------------------
 	// Text commands (pure, unit tested)
@@ -49,9 +48,10 @@
 	function wrap(state, before, after, placeholder) {
 		var value = state.value;
 		var selected = value.slice(state.start, state.end);
-		var outer = value.slice(state.start - before.length, state.start) === before
+		var outer = state.start >= before.length
+			&& value.slice(state.start - before.length, state.start) === before
 			&& value.slice(state.end, state.end + after.length) === after;
-		if (outer && state.start >= before.length) {
+		if (outer) {
 			return {
 				from: state.start - before.length,
 				to: state.end + after.length,
@@ -114,7 +114,8 @@
 	/** cycles the heading level of the selected lines: none -> ## -> ### -> none */
 	function heading(state) {
 		return editLines(state, function (lines) {
-			var level = (/^(#{1,6}) /.exec(lines[0]) || [, ''])[1].length;
+			var match = /^(#{1,6}) /.exec(lines[0]);
+			var level = match ? match[1].length : 0;
 			var next = level === 0 ? 2 : level >= 3 ? 0 : level + 1;
 			return lines.map(function (line) {
 				var text = line.replace(/^#{1,6} /, '');
@@ -160,18 +161,56 @@
 		return { from: from, to: to, text: text, start: from + 4, end: from + 4 + body.length };
 	}
 
-	var commands = {
-		bold: function (state) { return wrap(state, '**', '**', 'bold text'); },
-		italic: function (state) { return wrap(state, '_', '_', 'italic text'); },
-		heading: heading,
-		link: link,
-		code: code,
-		quote: function (state) { return prefixLines(state, '> '); },
-		list: function (state) { return prefixLines(state, '- '); },
-		numbered: numberedList,
+	/** horizontal rule after the line of the cursor */
+	function rule(state) {
+		var at = lineEnd(state.value, state.end);
+		var text = (at > 0 ? '\n\n' : '') + '---\n';
+		return { from: at, to: at, text: text, start: at + text.length, end: at + text.length };
+	}
+
+	/**
+	 * Built-in commands. text: visible button text, label: accessible name
+	 * (see LABELS), shortcut: key with Ctrl/Cmd.
+	 */
+	var COMMANDS = {
+		bold: { text: 'B', shortcut: 'b', run: function (state) { return wrap(state, '**', '**', 'bold text'); } },
+		italic: { text: 'I', shortcut: 'i', run: function (state) { return wrap(state, '_', '_', 'italic text'); } },
+		strikethrough: { text: 'S', run: function (state) { return wrap(state, '~~', '~~', 'text'); } },
+		heading: { text: 'H', run: heading },
+		link: { text: 'Link', shortcut: 'k', run: link },
+		code: { text: '</>', run: code },
+		quote: { text: '“', run: function (state) { return prefixLines(state, '> '); } },
+		list: { text: '•', run: function (state) { return prefixLines(state, '- '); } },
+		numbered: { text: '1.', run: numberedList },
+		tasks: { text: '☐', run: function (state) { return prefixLines(state, '- [ ] '); } },
+		rule: { text: '—', run: rule },
 	};
 
-	/** applies an edit to a plain string (used by the tests and as fallback) */
+	var DEFAULT_TOOLBAR = ['bold', 'italic', 'heading', '|', 'link', 'code', '|', 'quote', 'list', 'numbered'];
+	var MODES = ['write', 'split', 'preview'];
+
+	var LABELS = {
+		toolbar: 'Formatting',
+		bold: 'Bold',
+		italic: 'Italic',
+		strikethrough: 'Strikethrough',
+		heading: 'Heading',
+		link: 'Link',
+		code: 'Code',
+		quote: 'Quote',
+		list: 'Bulleted list',
+		numbered: 'Numbered list',
+		tasks: 'Task list',
+		rule: 'Horizontal rule',
+		write: 'Write',
+		preview: 'Preview',
+		split: 'Side by side',
+		download: 'Download',
+		input: 'Markdown',
+		empty: 'Nothing to preview yet.',
+	};
+
+	/** applies an edit to a plain string */
 	function applyEdit(value, edit) {
 		return value.slice(0, edit.from) + edit.text + value.slice(edit.to);
 	}
@@ -181,66 +220,66 @@
 		var base = String(name || '').split(/[\\/]/).pop().replace(/[\u0000-\u001f<>:"|?*]+/g, '').trim();
 		base = base.replace(/^\.+/, '');
 		if (!base) {
-			base = 'page.md';
+			base = 'document.md';
 		}
 		return /\.(md|markdown)$/i.test(base) ? base : base + '.md';
 	}
 
 	/**
-	 * Gives every id in the preview a prefix and rewrites "#id" links to
-	 * match, so preview headings never clash with ids of the host page.
+	 * Resolves the options to plain lists: toolbar items (command names and
+	 * "|"), commands by name, modes and the start mode. Pure, unit tested.
 	 */
-	function prefixIds(root, prefix) {
-		root.querySelectorAll('[id]').forEach(function (element) {
-			element.id = prefix + element.id;
+	function resolveOptions(options) {
+		options = options || {};
+		var commands = {};
+		Object.keys(COMMANDS).forEach(function (name) {
+			commands[name] = COMMANDS[name];
 		});
-		root.querySelectorAll('[for]').forEach(function (element) {
-			element.setAttribute('for', prefix + element.getAttribute('for'));
-		});
-		root.querySelectorAll('a[href^="#"]').forEach(function (element) {
-			var target = element.getAttribute('href').slice(1);
-			if (target) {
-				element.setAttribute('href', '#' + prefix + target);
+		Object.keys(options.commands || {}).forEach(function (name) {
+			var command = options.commands[name];
+			if (command && typeof command.run === 'function') {
+				commands[name] = command;
 			}
 		});
+
+		var toolbar = (Array.isArray(options.toolbar) ? options.toolbar : options.toolbar === false ? [] : DEFAULT_TOOLBAR)
+			.filter(function (item) {
+				return item === '|' || commands.hasOwnProperty(item);
+			})
+			// no separators at the start, the end or twice in a row
+			.reduce(function (list, item) {
+				if (item !== '|' || (list.length && list[list.length - 1] !== '|')) {
+					list.push(item);
+				}
+				return list;
+			}, []);
+		if (toolbar[toolbar.length - 1] === '|') {
+			toolbar.pop();
+		}
+
+		var preview = typeof options.render === 'function';
+		var modes = (Array.isArray(options.modes) ? options.modes : MODES).filter(function (mode, index, list) {
+			return MODES.indexOf(mode) >= 0 && list.indexOf(mode) === index && (preview || mode === 'write');
+		});
+		if (!modes.length) {
+			modes = [preview ? 'split' : 'write'];
+		}
+		var mode = modes.indexOf(options.mode) >= 0 ? options.mode : modes.indexOf('split') >= 0 ? 'split' : modes[0];
+
+		return {
+			toolbar: toolbar,
+			commands: commands,
+			modes: modes,
+			mode: mode,
+			download: Boolean(options.fileName) && options.download !== false,
+			shortcuts: options.shortcuts !== false,
+		};
 	}
 
 	// ---------------------------------------------------------------------
 	// Browser part
 	// ---------------------------------------------------------------------
 
-	var LABELS = {
-		toolbar: 'Formatting',
-		bold: 'Bold',
-		italic: 'Italic',
-		heading: 'Heading',
-		link: 'Link',
-		code: 'Code',
-		quote: 'Quote',
-		list: 'Bulleted list',
-		numbered: 'Numbered list',
-		write: 'Write',
-		preview: 'Preview',
-		split: 'Side by side',
-		download: 'Download',
-		input: 'Markdown',
-		empty: 'Nothing to preview yet.',
-	};
-
-	// visible text of the toolbar buttons (the label is the accessible name)
-	var GLYPHS = {
-		bold: 'B',
-		italic: 'I',
-		heading: 'H',
-		link: 'Link',
-		code: '</>',
-		quote: '“',
-		list: '•',
-		numbered: '1.',
-	};
-
-	var SHORTCUTS = { b: 'bold', i: 'italic', k: 'link' };
-	var MODES = ['write', 'split', 'preview'];
 	var counter = 0;
 
 	function element(tag, className, attributes) {
@@ -265,67 +304,127 @@
 	}
 
 	/**
+	 * Gives every id below root a prefix and rewrites "for" and "#id" links
+	 * to match, so preview content never clashes with ids of the page.
+	 */
+	function prefixIds(root, prefix) {
+		root.querySelectorAll('[id]').forEach(function (node) {
+			node.id = prefix + node.id;
+		});
+		root.querySelectorAll('[for]').forEach(function (node) {
+			node.setAttribute('for', prefix + node.getAttribute('for'));
+		});
+		root.querySelectorAll('a[href^="#"]').forEach(function (node) {
+			var target = node.getAttribute('href').slice(1);
+			if (target) {
+				node.setAttribute('href', '#' + prefix + target);
+			}
+		});
+	}
+
+	function storage() {
+		try {
+			return typeof localStorage !== 'undefined' ? localStorage : null;
+		} catch (e) {
+			return null; // blocked
+		}
+	}
+
+	function readDraft(key) {
+		try {
+			return key && storage() ? storage().getItem(key) : null;
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function writeDraft(key, value) {
+		try {
+			if (key && storage()) {
+				if (value === null) {
+					storage().removeItem(key);
+				} else {
+					storage().setItem(key, value);
+				}
+			}
+		} catch (e) {
+			// storage full or blocked - the text stays in the editor
+		}
+	}
+
+	/**
 	 * Creates an editor.
 	 *
 	 * @param {Element} target a <textarea> to enhance (it keeps its name, so it
 	 *   still works in forms) or a container the editor is appended to
-	 * @param {object} [options]
-	 *   value       initial text (default: the textarea's value)
-	 *   fileName    name for "Download"; without it there is no download button
-	 *   mode        'split' (default), 'write' or 'preview'
-	 *   storageKey  keep a draft in localStorage under this key
-	 *   delay       milliseconds between typing and preview update (default 200)
-	 *   labels      overrides for the English button texts (see LABELS)
-	 *   onChange    function (value, editor), called after every change
+	 * @param {object} [options] see README
 	 */
-	function createEditor(target, options) {
+	function markdownEditor(target, options) {
 		options = options || {};
+		var config = resolveOptions(options);
 		var labels = {};
 		Object.keys(LABELS).forEach(function (key) {
-			labels[key] = (options.labels && options.labels[key]) || LABELS[key];
+			labels[key] = LABELS[key];
 		});
-		var id = 'mdp-editor-' + (++counter);
+		Object.keys(config.commands).forEach(function (name) {
+			labels[name] = config.commands[name].label || labels[name] || name;
+		});
+		Object.keys(options.labels || {}).forEach(function (key) {
+			labels[key] = options.labels[key];
+		});
+		var id = 'markdown-editor-' + (++counter);
 
 		var isTextarea = target.tagName === 'TEXTAREA';
-		var root = element('div', 'mdp-editor');
+		var root = element('div', 'markdown-editor');
 		var input = isTextarea ? target : element('textarea', '', { 'aria-label': labels.input });
 		if (isTextarea) {
 			target.parentNode.insertBefore(root, target);
 		} else {
 			target.appendChild(root);
 		}
-		input.classList.add('mdp-editor-input');
+		input.classList.add('markdown-editor-input');
 		input.id = input.id || id + '-input';
-		input.setAttribute('spellcheck', input.getAttribute('spellcheck') || 'true');
 
-		var toolbar = element('div', 'mdp-editor-toolbar', { role: 'toolbar', 'aria-label': labels.toolbar, 'aria-controls': input.id });
-		var format = element('div', 'mdp-editor-format');
-		Object.keys(commands).forEach(function (name) {
-			var node = button('mdp-editor-button mdp-editor-' + name, GLYPHS[name], labels[name]);
+		var toolbar = element('div', 'markdown-editor-toolbar', { role: 'toolbar', 'aria-label': labels.toolbar, 'aria-controls': input.id });
+		var format = element('div', 'markdown-editor-format');
+		config.toolbar.forEach(function (name) {
+			if (name === '|') {
+				format.appendChild(element('span', 'markdown-editor-separator', { 'aria-hidden': 'true' }));
+				return;
+			}
+			var command = config.commands[name];
+			var node = button('markdown-editor-button markdown-editor-' + name, command.text || labels[name], labels[name]);
 			node.setAttribute('data-command', name);
 			format.appendChild(node);
 		});
-		var views = element('div', 'mdp-editor-modes');
+		if (config.toolbar.length) {
+			toolbar.appendChild(format);
+		}
+
 		var modeButtons = {};
-		MODES.forEach(function (name) {
-			var node = button('mdp-editor-mode', labels[name]);
-			node.setAttribute('data-mode', name);
-			modeButtons[name] = node;
-			views.appendChild(node);
-		});
-		toolbar.appendChild(format);
-		toolbar.appendChild(views);
+		if (config.modes.length > 1) {
+			var switcher = element('div', 'markdown-editor-modes');
+			config.modes.forEach(function (name) {
+				var node = button('markdown-editor-mode', labels[name]);
+				node.setAttribute('data-mode', name);
+				modeButtons[name] = node;
+				switcher.appendChild(node);
+			});
+			toolbar.appendChild(switcher);
+		}
 		var downloadButton = null;
-		if (options.fileName) {
-			downloadButton = button('mdp-editor-download', labels.download);
+		if (config.download) {
+			downloadButton = button('markdown-editor-download', labels.download);
 			toolbar.appendChild(downloadButton);
 		}
 
-		var panes = element('div', 'mdp-editor-panes');
-		var preview = element('div', 'mdp-editor-preview', { 'aria-live': 'polite', 'aria-label': labels.preview, role: 'region' });
+		var panes = element('div', 'markdown-editor-panes');
+		var preview = element('div', 'markdown-editor-preview', { role: 'region', 'aria-label': labels.preview, 'aria-live': 'polite' });
+		if (toolbar.childNodes.length) {
+			root.appendChild(toolbar);
+		}
 		panes.appendChild(input);
 		panes.appendChild(preview);
-		root.appendChild(toolbar);
 		root.appendChild(panes);
 
 		var initial = options.value !== undefined ? String(options.value) : input.value;
@@ -334,6 +433,14 @@
 		var saved = initial;
 		var timer = null;
 		var mode = null;
+		var renderCount = 0;
+		var shortcuts = {};
+		Object.keys(config.commands).forEach(function (name) {
+			var key = config.commands[name].shortcut;
+			if (key && (config.toolbar.indexOf(name) >= 0 || (options.commands && options.commands[name]))) {
+				shortcuts[String(key).toLowerCase()] = name;
+			}
+		});
 
 		var api = {
 			element: root,
@@ -344,7 +451,7 @@
 				input.value = String(value);
 				changed();
 			},
-			/** marks the current text as saved (isDirty() is false again, the draft is removed) */
+			/** marks the current text as saved: isDirty() is false again and the draft is removed */
 			markSaved: function () {
 				saved = input.value;
 				writeDraft(options.storageKey, null);
@@ -377,40 +484,47 @@
 
 		function renderPreview() {
 			clearTimeout(timer);
-			var ready = global.showdown && global.DOMPurify ? Promise.resolve() : MarkdownPages.ready || Promise.resolve();
-			return Promise.resolve(ready).then(function () {
-				var markdown = input.value;
+			if (typeof options.render !== 'function') {
+				return Promise.resolve();
+			}
+			var current = ++renderCount;
+			var markdown = input.value;
+			return Promise.resolve().then(function () {
+				return markdown.trim() ? options.render(markdown, preview) : null;
+			}).then(function (html) {
+				if (current !== renderCount) {
+					return false; // a newer render has started
+				}
 				if (!markdown.trim()) {
 					preview.innerHTML = '';
-					var hint = element('p', 'mdp-editor-empty');
+					var hint = element('p', 'markdown-editor-empty');
 					hint.textContent = labels.empty;
 					preview.appendChild(hint);
+				} else if (typeof html === 'string') {
+					// the render function is responsible for sanitizing
+					preview.innerHTML = html;
+				}
+				return typeof options.afterRender === 'function' ? options.afterRender(preview, api) : null;
+			}).then(function (result) {
+				if (result === false || current !== renderCount) {
 					return;
 				}
-				preview.innerHTML = MarkdownPages.toHtml(markdown);
-				if (global.showdownForms) {
-					global.showdownForms.restoreNames(preview, MarkdownPages.formsOptions);
-				}
-				var menus = MarkdownPages.applyMenus ? MarkdownPages.applyMenus(preview) : null;
-				return Promise.resolve(menus).catch(function () {
-					// a missing menu.json only leaves the placeholder empty
-				}).then(function () {
+				if (options.prefixIds !== false) {
 					prefixIds(preview, id + '-');
-				});
-			}).then(function () {
-				preview.dispatchEvent(new CustomEvent('mdp:editor-preview', { bubbles: true, detail: { editor: api } }));
+				}
+				preview.dispatchEvent(new CustomEvent('markdown-editor:preview', { bubbles: true, detail: { editor: api } }));
 			}).catch(function (error) {
-				console.error('markdown-pages-editor.js:', error);
+				console.error('markdown-editor:', error);
 			});
 		}
 
 		function setMode(next) {
-			if (MODES.indexOf(next) < 0 || next === mode) {
+			if (config.modes.indexOf(next) < 0 || next === mode) {
 				return;
 			}
 			mode = next;
 			root.setAttribute('data-mode', mode);
-			MODES.forEach(function (name) {
+			Object.keys(modeButtons).forEach(function (name) {
 				modeButtons[name].setAttribute('aria-pressed', name === mode ? 'true' : 'false');
 			});
 			input.hidden = mode === 'preview';
@@ -424,11 +538,14 @@
 		}
 
 		function exec(name) {
-			var command = commands[name];
+			var command = config.commands[name];
 			if (!command || input.disabled || input.readOnly) {
 				return;
 			}
-			var edit = command({ value: input.value, start: input.selectionStart, end: input.selectionEnd });
+			var edit = command.run({ value: input.value, start: input.selectionStart, end: input.selectionEnd });
+			if (!edit) {
+				return;
+			}
 			input.focus();
 			input.setSelectionRange(edit.from, edit.to);
 			// execCommand keeps the undo history; setRangeText is the fallback
@@ -472,8 +589,8 @@
 		}
 
 		function onKeyDown(event) {
-			if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
-				var name = SHORTCUTS[event.key.toLowerCase()];
+			if (config.shortcuts && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+				var name = shortcuts[String(event.key).toLowerCase()];
 				if (name) {
 					event.preventDefault();
 					exec(name);
@@ -482,7 +599,7 @@
 		}
 
 		// the preview is only a view: links do not navigate away from unsaved
-		// text and forms are neither sent nor seen by the host page's handlers
+		// text, forms are not submitted and do not reach the page's handlers
 		function onPreviewClick(event) {
 			var anchor = event.target.closest('a[href]');
 			if (anchor && anchor.getAttribute('href').charAt(0) !== '#') {
@@ -503,67 +620,30 @@
 
 		function destroy() {
 			clearTimeout(timer);
-			toolbar.removeEventListener('click', onToolbarClick);
+			renderCount++;
 			input.removeEventListener('input', changed);
 			input.removeEventListener('keydown', onKeyDown);
 			if (isTextarea) {
-				input.classList.remove('mdp-editor-input');
+				input.classList.remove('markdown-editor-input');
 				input.hidden = false;
 				root.parentNode.insertBefore(input, root);
 			}
 			root.remove();
 		}
 
-		setMode(MODES.indexOf(options.mode) >= 0 ? options.mode : 'split');
+		setMode(config.mode);
 		return api;
 	}
 
-	function readDraft(key) {
-		if (!key) {
-			return null;
-		}
-		try {
-			return global.localStorage.getItem(key);
-		} catch (e) {
-			return null;
-		}
-	}
+	markdownEditor.commands = COMMANDS;
+	markdownEditor.labels = LABELS;
+	markdownEditor.defaultToolbar = DEFAULT_TOOLBAR;
+	markdownEditor.resolveOptions = resolveOptions;
+	markdownEditor.applyEdit = applyEdit;
+	markdownEditor.safeFileName = safeFileName;
+	markdownEditor.prefixIds = prefixIds;
+	markdownEditor.helpers = { wrap: wrap, prefixLines: prefixLines, editLines: editLines };
+	markdownEditor.default = markdownEditor;
 
-	function writeDraft(key, value) {
-		if (!key) {
-			return;
-		}
-		try {
-			if (value === null) {
-				global.localStorage.removeItem(key);
-			} else {
-				global.localStorage.setItem(key, value);
-			}
-		} catch (e) {
-			// storage full or blocked - the text stays in the editor
-		}
-	}
-
-	createEditor.commands = commands;
-	createEditor.applyEdit = applyEdit;
-	createEditor.safeFileName = safeFileName;
-	createEditor.labels = LABELS;
-
-	MarkdownPages.editor = createEditor;
-
-	// <textarea data-mdp-editor data-file-name="page.md"> in index.html (not in
-	// Markdown) is enhanced automatically
-	if (typeof document !== 'undefined') {
-		var enhance = function () {
-			document.querySelectorAll('textarea[data-mdp-editor]').forEach(function (node) {
-				node.removeAttribute('data-mdp-editor');
-				createEditor(node, { fileName: node.getAttribute('data-file-name') || undefined, mode: node.getAttribute('data-mode') || undefined });
-			});
-		};
-		if (document.readyState === 'loading') {
-			document.addEventListener('DOMContentLoaded', enhance);
-		} else {
-			enhance();
-		}
-	}
-})(typeof window !== 'undefined' ? window : globalThis);
+	return markdownEditor;
+});

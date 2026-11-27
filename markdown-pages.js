@@ -210,6 +210,50 @@
 	MarkdownPages.setupForms = setupForms;
 
 	// ---------------------------------------------------------------------
+	// Editor - optional, provided by @schreibtischhelden/markdown-editor
+	// (vendored, but only loaded when the page includes it)
+	// ---------------------------------------------------------------------
+
+	// defaults for every MarkdownPages.editor(), e.g. { toolbar: [...], labels: {...} }
+	MarkdownPages.editorOptions = {};
+
+	/**
+	 * Creates a markdown-editor whose preview is rendered like the site:
+	 * toHtml (Showdown + DOMPurify + forms) and menu placeholders.
+	 * Needs assets/vendor/markdown-editor/markdown-editor.js.
+	 */
+	function createEditor(target, options) {
+		if (typeof global.markdownEditor !== 'function') {
+			throw new Error('markdown-pages.js: load assets/vendor/markdown-editor/markdown-editor.js to use MarkdownPages.editor()');
+		}
+		var merged = {};
+		[MarkdownPages.editorOptions, options || {}].forEach(function (source) {
+			Object.keys(source).forEach(function (key) {
+				merged[key] = source[key];
+			});
+		});
+		if (!merged.render) {
+			merged.render = function (markdown) {
+				return Promise.resolve(MarkdownPages.ready).then(function () {
+					return toHtml(markdown);
+				});
+			};
+		}
+		var afterRender = merged.afterRender;
+		merged.afterRender = function (element, editor) {
+			restoreFormNames(element);
+			return Promise.resolve(element).then(applyMenus).catch(function () {
+				// a missing menu.json only leaves the placeholder empty
+			}).then(function () {
+				return typeof afterRender === 'function' ? afterRender(element, editor) : null;
+			});
+		};
+		return global.markdownEditor(target, merged);
+	}
+
+	MarkdownPages.editor = createEditor;
+
+	// ---------------------------------------------------------------------
 	// Menu (menu.json) - pure part, unit tested
 	// ---------------------------------------------------------------------
 	//

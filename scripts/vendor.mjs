@@ -27,6 +27,10 @@ const manifest = {
 		target: 'showdown-forms',
 		files: [['showdown-forms.js', 'showdown-forms.js'], ['LICENSE', 'LICENSE']],
 	},
+	'@schreibtischhelden/markdown-editor': {
+		target: 'markdown-editor',
+		files: [['markdown-editor.js', 'markdown-editor.js'], ['markdown-editor.css', 'markdown-editor.css'], ['LICENSE', 'LICENSE']],
+	},
 	'@highlightjs/cdn-assets': {
 		target: 'highlightjs',
 		files: [
