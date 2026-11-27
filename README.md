@@ -44,7 +44,7 @@ Fork this repository (or copy `index.html`, `markdown-pages.js` and `assets/`), 
 
 | | |
 | :--- | :--- |
-| **Getting started** | [Quick start](?page=quick-start) · [Deployment](?page=deployment) |
+| **Getting started** | [Quick start](?page=quick-start) · [Deployment](?page=deployment) · [Use in other projects](?page=use-in-projects) |
 | **Usage** | [Writing pages](?page=writing-pages) · [Menu](?page=menu) · [Forms](?page=forms) · [Styles & scripts](?page=theming) · [Markdown showcase](?page=sample-page) |
 | **Reference** | [JavaScript API](?page=api) · [Security](?SECURITY) · [Releases](https://github.com/schreibtischhelden/markdown-pages.js/releases) |
 | **Project** | [Development](?page=development) |
