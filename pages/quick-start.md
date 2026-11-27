@@ -7,6 +7,8 @@ markdown-pages.js turns a folder of Markdown files into a website – without a 
 
 **Fork or download** [schreibtischhelden/markdown-pages.js](https://github.com/schreibtischhelden/markdown-pages.js). The repository is a complete, working site – this documentation.
 
+> **Several sites or automatic updates?** Include the library as a Git submodule and let Dependabot update it – see [Use in other projects](?page=use-in-projects).
+
 | File / folder | Purpose |
 | :--- | :--- |
 | `index.html` | The only HTML page – loads everything else |

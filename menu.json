@@ -5,7 +5,8 @@
 			"title": "Getting started",
 			"children": [
 				{ "title": "Quick start", "page": "quick-start" },
-				{ "title": "Deployment", "page": "deployment" }
+				{ "title": "Deployment", "page": "deployment" },
+				{ "title": "Use in other projects", "page": "use-in-projects" }
 			]
 		},
 		{
