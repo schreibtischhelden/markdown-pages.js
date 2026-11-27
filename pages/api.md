@@ -12,6 +12,7 @@
 | `extensions` | forms extension | Showdown extensions (objects) used for every conversion |
 | `menuUrl` | `'menu.json'` | Location of the menu file |
 | `homeUrl` | `'README.md'` | Markdown file of the home page, relative to `index.html` – e.g. `'profile/README.md'` to show a README from a git submodule. Must be a relative `.md` path without `..`, otherwise `README.md` is used. Links and images in that file are still resolved relative to `index.html` |
+| `tocDelay` | `50` | Milliseconds a live table of contents (`data-mdp-toc-live`) waits after the last change of `<main>` before it is rebuilt |
 | `formsOptions` | `{ idPrefix: 'mdp-form', dataPrefix: 'mdp' }` | Options for [showdown-forms](https://github.com/schreibtischhelden/showdown-forms) |
 
 ```javascript
@@ -39,7 +40,9 @@ MarkdownPages.sanitizeConfig.ADD_TAGS = ['iframe'];
 | `flattenMenu(menu)` | All linked menu items in order (`title`, `href`, `file`, `section`) |
 | `normalizeMenu(data)`, `parseMenu(text)`, `menuItemsFor(menu, kind, file)` | Menu helpers, see [Menu](?page=menu) |
 | `applyMenus(root)` | Replaces menu placeholders below `root` and fills them |
-| `buildToc()` | Fills all `[data-mdp-toc]` elements from the headings in `<main>` |
+| `buildToc()` | Fills all `[data-mdp-toc]` elements and the page sections of `[data-mdp-menu-toc]` menus from the visible `h2`/`h3` headings in `<main>` – call it after showing or hiding sections, or use live mode |
+| `watchToc()` | Starts the live mode observer on `<main>` if a `[data-mdp-toc-live]` element exists (called after each render, runs once); returns whether it is active |
+| `tocEntries(headings, root)`, `isHidden(element, root)` | Table of contents helpers: visible headings as nested `{ id, title, children }`, and whether an element or an ancestor below `root` is hidden |
 | `isSafeHeadingId(id)` | Whether a heading id is kept by the sanitizer hook |
 | `setupForms(showdownForms)`, `formsExtension` | Forms integration |
 

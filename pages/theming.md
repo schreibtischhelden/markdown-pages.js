@@ -42,8 +42,7 @@ Inline handlers (`onclick="…"`) do not work – the sanitizer removes them and
 This site uses the optional documentation theme `assets/docs.css` + `assets/docs.js`, a layout in the style of documentation sites such as [docs.paperless-ngx.com](https://docs.paperless-ngx.com/):
 
 - top bar with logo, search, theme toggle and repository link (`header.md`)
-- navigation on the left from `menu.json` (`<nav data-mdp-menu="tree">` in `index.html`)
-- table of contents on the right (`<nav data-mdp-toc>`), highlighting the visible section
+- navigation on the left from `menu.json` (`<nav data-mdp-menu="tree" data-mdp-menu-toc>` in `index.html`), with the sections of the current page below its menu item and the visible section highlighted
 - previous/next links and an "Edit this page" link (`EDIT_BASE` in `docs.js`)
 - full-text search over all pages in `menu.json` – press `/` to focus it
 - mobile navigation below 960px
@@ -57,4 +56,5 @@ To reuse it, copy `index.html`, `header.md`, `assets/docs.css` and `assets/docs.
 | `.mdp-menu`, `.mdp-menu-main`, `.mdp-menu-tree`, `.mdp-menu-sub`, `.mdp-menu-current` | Generated menus |
 | `.mdp-menu-item-current`, `.mdp-menu-item-active`, `[aria-current="page"]` | Current page and its parents |
 | `.mdp-toc` | Generated table of contents |
+| `.mdp-menu-toc` | Sections of the current page inside a menu (`data-mdp-menu-toc`) |
 | `.figure-left`, `.figure-right`, `.img-left`, `.img-right` | Floating figures and images (`user-styles.css`) |

@@ -48,7 +48,23 @@ Write the placeholder on its own line (it replaces the paragraph) or inline:
 
 Placeholders inside code (`` `...` `` or code blocks) are not replaced. Instead of a placeholder, an element like `<nav data-mdp-menu="sub:docs"></nav>` can be used – also directly in `index.html`, outside of `header`/`main`/`footer`. This site does that for the sidebar: `<nav data-mdp-menu="tree">`. Groups without `page`/`href` (e.g. *Usage*) are shown as headings.
 
-Related: `{{toc}}` (or `<nav data-mdp-toc>`) inserts a table of contents of the current page, see [Writing pages](?page=writing-pages#placeholders).
+Related: `{{toc}}` (or `<nav data-mdp-toc>`) inserts a table of contents of the current page, see [Writing pages](?page=writing-pages#table-of-contents).
+
+## Sections of the current page
+
+Add `data-mdp-menu-toc` to a menu element to show the `h2`/`h3` headings of the current page as a submenu of the current item – useful for long pages in a sidebar:
+
+```html
+<nav data-mdp-menu="tree" data-mdp-menu-toc></nav>
+```
+
+The sections are inserted as `<ul class="mdp-menu-toc">` into the list item of the current page, after its link and before its subpages. Hidden headings are left out. They are refreshed whenever the table of contents is rebuilt (after rendering, on `MarkdownPages.buildToc()` and, with `data-mdp-toc-live` on the same element, whenever `<main>` changes):
+
+```html
+<nav data-mdp-menu="tree" data-mdp-menu-toc data-mdp-toc-live></nav>
+```
+
+The attributes work on any nested menu (`tree`, `current`, `sub:<id>`), in `index.html` or as HTML in `header.md`; the `{{menu:…}}` placeholders cannot carry them. Without `menu.json` there is no current item, so nothing is added.
 
 ## Without menu.json (fallback)
 
@@ -69,5 +85,5 @@ Mark the hand-written navigation with `data-mdp-menu-fallback`. It is shown only
 
 ## Styling
 
-The link of the current page gets `aria-current="page"`, its list item the class `mdp-menu-item-current`, parent items the class `mdp-menu-item-active`. The menus have the classes `mdp-menu` and `mdp-menu-main` / `mdp-menu-tree` / `mdp-menu-sub` / `mdp-menu-current` for styling.
+The link of the current page gets `aria-current="page"`, its list item the class `mdp-menu-item-current`, parent items the class `mdp-menu-item-active`. The menus have the classes `mdp-menu` and `mdp-menu-main` / `mdp-menu-tree` / `mdp-menu-sub` / `mdp-menu-current` for styling. The sections of the current page (`data-mdp-menu-toc`) are a `ul.mdp-menu-toc`.
 

@@ -1,7 +1,7 @@
 // Documentation theme for markdown-pages.js (see assets/docs.css):
 // mobile navigation, search over all pages in menu.json, previous/next
 // links, "edit this page" link and highlighting of the current section in
-// the table of contents. Everything is built with DOM APIs (textContent),
+// the sidebar (sections of the current page, data-mdp-menu-toc). Everything is built with DOM APIs (textContent),
 // nothing from the Markdown files is inserted as HTML.
 (function () {
 	'use strict';
@@ -103,7 +103,7 @@
 		main.insertBefore(a, main.firstChild);
 	}
 
-	// ------------------------------------------ table of contents spy
+	// ------------------------------------------ current section spy
 
 	var tocObserver = null;
 
@@ -111,10 +111,6 @@
 		if (tocObserver) {
 			tocObserver.disconnect();
 		}
-		var links = {};
-		document.querySelectorAll('.docs-toc-column .mdp-toc a').forEach(function (a) {
-			links[decodeURIComponent(a.getAttribute('href').slice(1))] = a;
-		});
 		var headings = document.querySelectorAll('main h2[id], main h3[id]');
 		if (!headings.length || !('IntersectionObserver' in window)) {
 			return;
@@ -132,8 +128,9 @@
 				}
 			}
 			if (active) {
-				Object.keys(links).forEach(function (id) {
-					links[id].classList.toggle('docs-toc-active', id === active);
+				// looked up each time: the sidebar menu may be filled after <main>
+				document.querySelectorAll('.docs-sidebar .mdp-menu-toc a').forEach(function (a) {
+					a.classList.toggle('docs-toc-active', decodeURIComponent(a.getAttribute('href').slice(1)) === active);
 				});
 			}
 		}, { rootMargin: '-60px 0px -60% 0px' });

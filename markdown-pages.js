@@ -229,6 +229,8 @@
 	//
 	// Elements outside the rendered regions (e.g. a sidebar in index.html)
 	// can use <nav data-mdp-menu="tree"></nav> and <nav data-mdp-toc></nav>.
+	// data-mdp-menu-toc on a menu adds the sections of the current page below
+	// its current item, see "Table of contents" below.
 
 	MarkdownPages.menuUrl = 'menu.json';
 
@@ -506,10 +508,14 @@
 				nav.textContent = '';
 				if (items.length) {
 					nav.appendChild(buildList(items, currentFile, kind !== 'main'));
+					if (nav.hasAttribute('data-mdp-menu-toc')) {
+						fillMenuToc(nav, mainTocEntries());
+					}
 				} else {
 					nav.hidden = true;
 				}
 			});
+			watchToc();
 		});
 	}
 
@@ -527,41 +533,164 @@
 		});
 	}
 
+	// ---------------------------------------------------------------------
+	// Table of contents
+	// ---------------------------------------------------------------------
+	//
+	//   <nav data-mdp-toc></nav>                        h2/h3 of <main>
+	//   <nav data-mdp-toc data-mdp-toc-live></nav>      ... rebuilt when <main> changes
+	//   <nav data-mdp-menu="tree" data-mdp-menu-toc>    h2/h3 below the current menu item
+	//
+	// Hidden headings (hidden attribute, or inside a [hidden] element) are
+	// left out, so pages that show or hide sections at runtime stay in sync.
+
+	/** whether an element or one of its ancestors up to (excluding) root is hidden */
+	function isHidden(element, root) {
+		for (var node = element; node && node !== root; node = node.parentNode) {
+			if (node.hasAttribute && node.hasAttribute('hidden')) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/**
-	 * Fills <nav data-mdp-toc> elements with the h2/h3 headings of <main>.
+	 * Turns h2/h3 elements (in document order) into a nested list of
+	 * { id, title, children }. Hidden headings and headings without id are
+	 * skipped; an h3 whose h2 is skipped moves up to the top level.
+	 */
+	function tocEntries(headings, root) {
+		var result = [];
+		var current = null;
+		Array.prototype.forEach.call(headings, function (heading) {
+			var isH3 = heading.tagName === 'H3';
+			if (!heading.id || isHidden(heading, root)) {
+				if (!isH3) {
+					current = null;
+				}
+				return;
+			}
+			var entry = { id: heading.id, title: heading.textContent, children: [] };
+			if (isH3 && current) {
+				current.children.push(entry);
+			} else {
+				result.push(entry);
+				current = isH3 ? null : entry;
+			}
+		});
+		return result;
+	}
+
+	MarkdownPages.isHidden = isHidden;
+	MarkdownPages.tocEntries = tocEntries;
+
+	/** builds the <ul> of a table of contents with DOM APIs only */
+	function buildTocList(entries) {
+		var ul = document.createElement('ul');
+		entries.forEach(function (entry) {
+			var li = document.createElement('li');
+			var a = document.createElement('a');
+			a.setAttribute('href', '#' + encodeURIComponent(entry.id));
+			a.textContent = entry.title;
+			li.appendChild(a);
+			if (entry.children.length) {
+				li.appendChild(buildTocList(entry.children));
+			}
+			ul.appendChild(li);
+		});
+		return ul;
+	}
+
+	function mainTocEntries() {
+		var main = document.querySelector('main');
+		return main ? tocEntries(main.querySelectorAll('h2, h3'), main) : [];
+	}
+
+	/** puts the entries below the current item of a <nav data-mdp-menu-toc> */
+	function fillMenuToc(nav, entries) {
+		var item = nav.querySelector('li.mdp-menu-item-current');
+		var old = nav.querySelector('ul.mdp-menu-toc');
+		if (old) {
+			old.remove();
+		}
+		if (!item || !entries.length) {
+			return;
+		}
+		var list = buildTocList(entries);
+		list.className = 'mdp-menu-toc';
+		// after the link, before the list of subpages (if any)
+		item.insertBefore(list, item.firstChild ? item.firstChild.nextSibling : null);
+	}
+
+	/**
+	 * Fills <nav data-mdp-toc> elements and the page sections of
+	 * <nav data-mdp-menu-toc> menus with the visible h2/h3 headings of <main>.
 	 * Built with DOM APIs only; headings without id are skipped.
 	 */
 	function buildToc() {
-		var main = document.querySelector('main');
-		var headings = main ? main.querySelectorAll('h2[id], h3[id]') : [];
+		var entries = mainTocEntries();
+		lastTocKey = JSON.stringify(entries);
 		document.querySelectorAll('[data-mdp-toc]').forEach(function (nav) {
 			nav.textContent = '';
 			nav.className = 'mdp-toc';
 			if (!nav.hasAttribute('aria-label')) {
 				nav.setAttribute('aria-label', 'Table of contents');
 			}
-			var list = document.createElement('ul');
-			var current = null;
-			headings.forEach(function (heading) {
-				var li = document.createElement('li');
-				var a = document.createElement('a');
-				a.setAttribute('href', '#' + encodeURIComponent(heading.id));
-				a.textContent = heading.textContent;
-				li.appendChild(a);
-				if (heading.tagName === 'H3' && current) {
-					var sub = current.querySelector('ul') || current.appendChild(document.createElement('ul'));
-					sub.appendChild(li);
-				} else {
-					list.appendChild(li);
-					current = li;
-				}
-			});
-			nav.hidden = !headings.length;
-			nav.appendChild(list);
+			nav.hidden = !entries.length;
+			nav.appendChild(buildTocList(entries));
+		});
+		document.querySelectorAll('[data-mdp-menu-toc]').forEach(function (nav) {
+			fillMenuToc(nav, entries);
 		});
 	}
 
 	MarkdownPages.buildToc = buildToc;
+
+	// live mode: rebuild when headings are shown, hidden, added or removed
+
+	var LIVE_SELECTOR = '[data-mdp-toc][data-mdp-toc-live], [data-mdp-menu-toc][data-mdp-toc-live]';
+	var tocObserver = null;
+	var lastTocKey = null;
+
+	/** mutations of the generated navigation itself must not trigger a rebuild */
+	function isOwnMutation(record) {
+		var target = record.target;
+		return !!(target && target.closest && target.closest('[data-mdp-toc], [data-mdp-menu]'));
+	}
+
+	/**
+	 * Starts a debounced MutationObserver on <main> if a live table of
+	 * contents exists. Runs once; later calls do nothing. Returns whether
+	 * the observer is active.
+	 */
+	function watchToc() {
+		if (tocObserver) {
+			return true;
+		}
+		var main = document.querySelector('main');
+		if (!main || typeof global.MutationObserver !== 'function' || !document.querySelector(LIVE_SELECTOR)) {
+			return false;
+		}
+		var timer = null;
+		tocObserver = new global.MutationObserver(function (records) {
+			if (records.every(isOwnMutation)) {
+				return;
+			}
+			global.clearTimeout(timer);
+			timer = global.setTimeout(function () {
+				// skip the DOM work if the visible headings did not change
+				if (JSON.stringify(mainTocEntries()) !== lastTocKey) {
+					buildToc();
+				}
+			}, MarkdownPages.tocDelay);
+		});
+		tocObserver.observe(main, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
+		return true;
+	}
+
+	/** delay (ms) before a live table of contents is rebuilt */
+	MarkdownPages.tocDelay = 50;
+	MarkdownPages.watchToc = watchToc;
 
 	// ---------------------------------------------------------------------
 	// Browser runtime
@@ -603,6 +732,7 @@
 			if (selector === 'main') {
 				buildToc();
 			}
+			watchToc();
 			document.dispatchEvent(new CustomEvent('mdp:rendered', {
 				detail: { region: selector, page: page },
 			}));
