@@ -19,6 +19,29 @@ The first `# heading` of a page becomes the browser title (`Heading | Site title
 
 `header.md` and `footer.md` are rendered into `<header>` and `<footer>` on every page. Both are optional.
 
+## Markdown syntax
+
+Pages are written in Markdown as described in the [Markdown Guide](https://markdownguide.offshoot.io/): all of the [basic syntax](https://markdownguide.offshoot.io/basic-syntax/) and the [extended syntax](https://markdownguide.offshoot.io/extended-syntax/) work. The [Markdown showcase](?page=sample-page) shows every element.
+
+| Extended syntax | Markdown |
+| :--- | :--- |
+| Tables, fenced code blocks, strikethrough | as on GitHub |
+| Task lists | `- [ ] open`, `- [x] done` |
+| Footnotes | `Text[^1]` and somewhere `[^1]: The note.` – indent further paragraphs by four spaces. Notes are numbered in order of use and listed at the end of the page |
+| Heading ids | `### Title {#custom-id}` – without it the id is generated, see [below](#headings-and-anchors) |
+| Definition lists | `Term` and in the next line `: Definition` |
+| Highlight | `==text==` |
+| Subscript, superscript | `H~2~O`, `X^2^` (no spaces inside) |
+| Emoji | `:smile:` |
+
+The extended syntax that Showdown does not support itself (footnotes, definition lists, highlight, sub- and superscript) is added by markdown-pages.js. Set `MarkdownPages.extendedSyntax = [];` in your own script to switch it off.
+
+### Hacks
+
+For what Markdown cannot do, the Markdown Guide collects [hacks](https://markdownguide.offshoot.io/hacks/). They work here because HTML is allowed (see [HTML in Markdown](#html-in-markdown)): underline with `<ins>`, `&nbsp;` indents, `<center>` or `<p style="text-align:center">`, colours with `style` or `<font>`, comments with `[comment]: #`, admonitions as blockquotes with emoji, `<img width>`, `<figure>` captions, `target="_blank"` links (they get `rel="noopener noreferrer"`), HTML entities, `<br>` and lists in table cells, and a table of contents from heading links – or simply `{{toc}}`.
+
+Embedded videos are the exception: `<iframe>` is removed by the sanitizer, so use the hack's image link to the video instead.
+
 ## Markdown options
 
 The [Showdown](https://showdownjs.com/) converter runs with these [options](https://showdownjs.com/docs/available-options/):
@@ -28,6 +51,7 @@ MarkdownPages.showdownOptions = {
   tables: true,
   emoji: true,
   ghCompatibleHeaderId: true,
+  customizedHeaderId: true, // "### Title {#id}"
   simpleLineBreaks: true,
   strikethrough: true,
   tasklists: true,
@@ -40,7 +64,7 @@ Change them in your own script before the page is rendered, e.g. `MarkdownPages.
 
 ## Headings and anchors
 
-Headings get ids like on GitHub: `## Quick start` → `#quick-start`. Link to them with `[text](?page=name#quick-start)`. The table of contents (`{{toc}}` or `<nav data-mdp-toc>`) is built from `h2` and `h3`.
+Headings get ids like on GitHub: `## Quick start` → `#quick-start`. A custom id is set with `## Quick start {#start}`. Link to them with `[text](?page=name#quick-start)`. The table of contents (`{{toc}}` or `<nav data-mdp-toc>`) is built from `h2` and `h3`.
 
 ## Table of contents
 

@@ -95,6 +95,8 @@
 		tables: true,
 		emoji: true,
 		ghCompatibleHeaderId: true,
+		// "### Title {#id}" sets the id
+		customizedHeaderId: true,
 		simpleLineBreaks: true,
 		strikethrough: true,
 		tasklists: true,
@@ -160,8 +162,178 @@
 
 	MarkdownPages.isSafeHeadingId = isSafeHeadingId;
 
+	// ---------------------------------------------------------------------
+	// Extended syntax (pure Showdown extensions, unit tested)
+	// ---------------------------------------------------------------------
+	//
+	// Markdown Guide "extended syntax" that Showdown does not support itself:
+	//   ==highlight==  H~2~O  x^2^
+	//   footnote[^1]   [^1]: The note.
+	//   Term
+	//   : Definition
+	// Custom heading ids ("### Title {#id}") use Showdown's customizedHeaderId.
+
+	var FENCE = /^ {0,3}(`{3,}|~{3,})/;
+	var DL_MARK = '\u0002mdpdl:';
+
+	/** calls fn(line, index) for every line outside fenced code blocks; fn returns the new line or null to drop it */
+	function mapLines(markdown, fn) {
+		var fence = null;
+		var out = [];
+		var lines = markdown.split('\n');
+		for (var i = 0; i < lines.length; i++) {
+			var line = lines[i];
+			var marker = FENCE.exec(line);
+			if (fence) {
+				if (marker && marker[1].charAt(0) === fence.charAt(0) && marker[1].length >= fence.length && !line.slice(marker[0].length).trim()) {
+					fence = null;
+				}
+				out.push(line);
+				continue;
+			}
+			if (marker) {
+				fence = marker[1];
+				out.push(line);
+				continue;
+			}
+			var result = fn(line, i, lines);
+			if (result !== null) {
+				out.push(result);
+			}
+		}
+		return out.join('\n');
+	}
+
+	/** replaces matches in a line, but not inside `code spans` */
+	function replaceOutsideCode(line, pattern, replace) {
+		return line.split(/(`+[^`]*`+)/).map(function (part, index) {
+			return index % 2 ? part : part.replace(pattern, replace);
+		}).join('');
+	}
+
+	/** like trimEnd(), without a /\s+$/ regex that is slow on long runs of spaces */
+	function trimEnd(text) {
+		var end = text.length;
+		while (end > 0 && /\s/.test(text.charAt(end - 1))) {
+			end--;
+		}
+		return text.slice(0, end);
+	}
+
+	function escapeAttribute(text) {
+		return String(text).replace(/[^A-Za-z0-9_-]/g, '-');
+	}
+
+	/** footnotes: collects "[^id]: note" (with indented continuation lines), numbers the references in order of appearance */
+	function footnotes(markdown) {
+		var notes = {};
+		var current = null;
+		var DEFINITION = /^ {0,3}\[\^([^\]\s]+)\]:[ \t]?(.*)$/;
+		var text = mapLines(markdown, function (line) {
+			var match = DEFINITION.exec(line);
+			if (match) {
+				current = match[1];
+				notes[current] = [match[2]];
+				return null;
+			}
+			if (current && (/^( {2,}|\t)/.test(line) || (!line.trim() && notes[current].length))) {
+				notes[current].push(line.replace(/^( {1,4}|\t)/, ''));
+				return null;
+			}
+			current = null;
+			return line;
+		});
+		var order = [];
+		var count = {};
+		text = mapLines(text, function (line) {
+			// ids cannot contain "[" or "^", so "[^[^[^…" fails fast
+			return replaceOutsideCode(line, /\[\^([^\]\s[^]+)\](?!:)/g, function (all, id) {
+				if (!notes.hasOwnProperty(id)) {
+					return all;
+				}
+				if (order.indexOf(id) < 0) {
+					order.push(id);
+				}
+				count[id] = (count[id] || 0) + 1;
+				var key = escapeAttribute(id);
+				var refId = 'fnref-' + key + (count[id] > 1 ? '-' + count[id] : '');
+				return '<sup class="footnote-ref"><a href="#fn-' + key + '" id="' + refId + '">' + (order.indexOf(id) + 1) + '</a></sup>';
+			});
+		});
+		if (!order.length) {
+			return text;
+		}
+		var list = order.map(function (id, index) {
+			var key = escapeAttribute(id);
+			var body = trimEnd(notes[id].join('\n')).split('\n').join('\n    ');
+			return (index + 1) + '. <span id="fn-' + key + '"></span>' + body + ' <a href="#fnref-' + key + '" class="footnote-backref" aria-label="Back to text">↩︎</a>';
+		}).join('\n');
+		return trimEnd(text) + '\n\n<section class="footnotes" markdown="1">\n\n<hr>\n\n' + list + '\n\n</section>\n';
+	}
+
+	/** definition lists: term lines followed by ": definition" lines become marked paragraphs, turned into <dl> by finishDefinitions */
+	function definitions(markdown) {
+		return mapLines(markdown, function (line, index, lines) {
+			var definition = /^ {0,3}:[ \t]+(\S.*)$/.exec(line);
+			if (definition) {
+				var previous = lines[index - 1] || '';
+				// only after a term or another definition
+				return previous.trim() ? DL_MARK + 'dd ' + definition[1] : line;
+			}
+			var next = lines[index + 1] || '';
+			if (line.trim() && !/^ {0,3}([#>|*+-]|\d+\.|:)/.test(line) && /^ {0,3}:[ \t]+\S/.test(next)) {
+				return DL_MARK + 'dt ' + line.trim();
+			}
+			return line;
+		});
+	}
+
+	/** turns the marked paragraphs of definitions() into <dl> */
+	function finishDefinitions(html) {
+		var mark = DL_MARK.replace(/[\u0002]/g, '\\u0002');
+		var paragraph = new RegExp('<p>\\s*(' + mark + 'd[td] [\\s\\S]*?)</p>', 'g');
+		return html.replace(paragraph, function (all, body) {
+			var items = body.split(new RegExp('(?:<br\\s*/?>)?\\s*' + mark)).filter(function (item) {
+				return item.trim();
+			}).map(function (item) {
+				item = item.replace(new RegExp('^' + mark), '');
+				var tag = item.slice(0, 2);
+				return '<' + tag + '>' + item.slice(3).trim() + '</' + tag + '>';
+			});
+			return '<dl>\n' + items.join('\n') + '\n</dl>';
+		}).split(DL_MARK).join('');
+	}
+
+	/** ==highlight==, ~sub~ and ^sup^ in text, not inside code, pre or tags */
+	function inlineMarks(html) {
+		var depth = 0;
+		return html.split(/(<[^<>]*>)/).map(function (part, index) {
+			if (index % 2) {
+				var tag = /^<(\/?)(code|pre|script|style|textarea)\b/i.exec(part);
+				if (tag) {
+					depth += tag[1] ? -1 : 1;
+				}
+				return part;
+			}
+			if (depth > 0) {
+				return part;
+			}
+			return part
+				.replace(/==(?=\S)([^=<]*?\S)==/g, '<mark>$1</mark>')
+				// no spaces or "/" inside, so paths like /~user/~x stay as they are
+				.replace(/(^|[^~\\/])~([^~\s<\/]+)~(?!~)/g, '$1<sub>$2</sub>')
+				.replace(/(^|[^\\])\^([^\^\s<\/]+)\^/g, '$1<sup>$2</sup>');
+		}).join('');
+	}
+
+	MarkdownPages.extendedSyntax = [
+		{ type: 'lang', filter: function (text) { return definitions(footnotes(text)); } },
+		{ type: 'output', filter: function (html) { return inlineMarks(finishDefinitions(html)); } },
+	];
+
 	function toHtml(markdown) {
-		var converter = new global.showdown.Converter({ extensions: MarkdownPages.extensions });
+		var extensions = (MarkdownPages.extendedSyntax || []).concat(MarkdownPages.extensions);
+		var converter = new global.showdown.Converter({ extensions: extensions });
 		Object.keys(MarkdownPages.showdownOptions).forEach(function (key) {
 			converter.setOption(key, MarkdownPages.showdownOptions[key]);
 		});
