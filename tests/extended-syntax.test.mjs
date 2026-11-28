@@ -133,3 +133,22 @@ test('without simpleLineBreaks definition lists still work', () => {
 	// Assert
 	assert.equal(html, '<dl>\n<dt>Term</dt>\n<dd>Definition</dd>\n</dl>');
 });
+
+test('long unusual input is converted quickly (no ReDoS)', () => {
+	// Arrange
+	const [lang, output] = MarkdownPages.extendedSyntax;
+	const n = 50000;
+	const inputs = [
+		() => lang.filter('a[^1]\n\n[^1]: x' + ' '.repeat(n) + 'y'),
+		() => lang.filter('[^'.repeat(n)),
+		() => output.filter('<'.repeat(n)),
+		() => output.filter('<p>' + '~a'.repeat(n) + '</p>'),
+	];
+
+	// Act
+	const start = Date.now();
+	inputs.forEach((run) => run());
+
+	// Assert
+	assert.ok(Date.now() - start < 1000, `took ${Date.now() - start} ms`);
+});

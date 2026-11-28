@@ -211,6 +211,15 @@
 		}).join('');
 	}
 
+	/** like trimEnd(), without a /\s+$/ regex that is slow on long runs of spaces */
+	function trimEnd(text) {
+		var end = text.length;
+		while (end > 0 && /\s/.test(text.charAt(end - 1))) {
+			end--;
+		}
+		return text.slice(0, end);
+	}
+
 	function escapeAttribute(text) {
 		return String(text).replace(/[^A-Za-z0-9_-]/g, '-');
 	}
@@ -237,7 +246,8 @@
 		var order = [];
 		var count = {};
 		text = mapLines(text, function (line) {
-			return replaceOutsideCode(line, /\[\^([^\]\s]+)\](?!:)/g, function (all, id) {
+			// ids cannot contain "[" or "^", so "[^[^[^…" fails fast
+			return replaceOutsideCode(line, /\[\^([^\]\s[^]+)\](?!:)/g, function (all, id) {
 				if (!notes.hasOwnProperty(id)) {
 					return all;
 				}
@@ -255,10 +265,10 @@
 		}
 		var list = order.map(function (id, index) {
 			var key = escapeAttribute(id);
-			var body = notes[id].join('\n').replace(/\s+$/, '').split('\n').join('\n    ');
+			var body = trimEnd(notes[id].join('\n')).split('\n').join('\n    ');
 			return (index + 1) + '. <span id="fn-' + key + '"></span>' + body + ' <a href="#fnref-' + key + '" class="footnote-backref" aria-label="Back to text">↩︎</a>';
 		}).join('\n');
-		return text.replace(/\s+$/, '') + '\n\n<section class="footnotes" markdown="1">\n\n<hr>\n\n' + list + '\n\n</section>\n';
+		return trimEnd(text) + '\n\n<section class="footnotes" markdown="1">\n\n<hr>\n\n' + list + '\n\n</section>\n';
 	}
 
 	/** definition lists: term lines followed by ": definition" lines become marked paragraphs, turned into <dl> by finishDefinitions */
@@ -297,7 +307,7 @@
 	/** ==highlight==, ~sub~ and ^sup^ in text, not inside code, pre or tags */
 	function inlineMarks(html) {
 		var depth = 0;
-		return html.split(/(<[^>]*>)/).map(function (part, index) {
+		return html.split(/(<[^<>]*>)/).map(function (part, index) {
 			if (index % 2) {
 				var tag = /^<(\/?)(code|pre|script|style|textarea)\b/i.exec(part);
 				if (tag) {
