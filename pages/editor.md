@@ -2,7 +2,7 @@
 
 markdown-pages.js can show a lightweight Markdown editor: a text field with a configurable toolbar and a live preview. The editor is the package [@schreibtischhelden/markdown-pages-editor](https://github.com/schreibtischhelden/markdown-pages-editor) (vendored in `assets/vendor/markdown-pages-editor/`). `MarkdownPages.editor()` connects it to the site, so the preview is rendered exactly like a page – Showdown with the same options, DOMPurify, [forms](?page=forms) and [menu placeholders](?page=menu).
 
-Nothing is sent anywhere: the text can be downloaded as a `.md` file or, rendered, as an `.html` file, or read with `getValue()`. Use it for tools that produce Markdown in the browser, e.g. a configuration UI that lets people write the pages of their site.
+Nothing is sent anywhere: the text can be downloaded as a `.md` file or, rendered, as an `.html` file, or read with `getValue()`. `checkHtml(html)` and `markdownPagesEditor.compareHtml(expected, actual)` tell whether an existing `.html` file still matches the text (by content, with the first difference). Use it for tools that produce Markdown in the browser, e.g. a configuration UI that lets people write the pages of their site.
 
 ## Example
 
@@ -55,7 +55,7 @@ MarkdownPages.editorOptions = {
 | `onChange`, `afterRender` | – | Callbacks |
 | `render` | site renderer | Only set it to use a different renderer |
 
-The returned object has `getValue()`, `setValue()`, `isDirty()`, `markSaved()`, `download()`, `saveHtml()`, `getHtml()`, `setMode()`, `render()`, `exec()`, `focus()` and `destroy()` – see the [package documentation](https://github.com/schreibtischhelden/markdown-pages-editor#methods).
+The returned object has `getValue()`, `setValue()`, `isDirty()`, `markSaved()`, `download()`, `saveHtml()`, `getHtml()`, `checkHtml()`, `setMode()`, `render()`, `exec()`, `focus()` and `destroy()` – see the [package documentation](https://github.com/schreibtischhelden/markdown-pages-editor#methods).
 
 ## Preview
 

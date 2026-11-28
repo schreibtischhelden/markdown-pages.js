@@ -474,6 +474,354 @@
 			'</html>\n';
 	}
 
+	// ---------------------------------------------------------------------
+	// Comparing HTML documents (pure, unit tested)
+	// ---------------------------------------------------------------------
+	//
+	// A small tokenizer instead of DOMParser, so it also runs without a DOM.
+	// It is written with indexOf loops (no regular expressions with nested
+	// repetition), so long or broken input stays fast.
+
+	var VOID_ELEMENTS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+	var RAW_TEXT_ELEMENTS = ['script', 'style', 'textarea', 'title'];
+	var ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: '\'', nbsp: ' ' };
+
+	function decodeEntities(text) {
+		return text.replace(/&(#x[0-9a-f]{1,6}|#[0-9]{1,7}|[a-z]{2,8});/gi, function (all, code) {
+			if (code.charAt(0) === '#') {
+				var number = code.charAt(1).toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+				return number > 0 && number < 0x110000 ? String.fromCodePoint ? String.fromCodePoint(number) : String.fromCharCode(number) : all;
+			}
+			return ENTITIES.hasOwnProperty(code.toLowerCase()) ? ENTITIES[code.toLowerCase()] : all;
+		});
+	}
+
+	function isSpace(char) {
+		return char === ' ' || char === '\n' || char === '\t' || char === '\f' || char === '\r';
+	}
+
+	/** index after the ">" that ends the tag starting at "<" (quotes respected), or -1 */
+	function tagEnd(html, from) {
+		var quote = '';
+		for (var i = from + 1; i < html.length; i++) {
+			var char = html.charAt(i);
+			if (quote) {
+				if (char === quote) {
+					quote = '';
+				}
+			} else if (char === '"' || char === '\'') {
+				quote = char;
+			} else if (char === '>') {
+				return i + 1;
+			}
+		}
+		return -1;
+	}
+
+	/** { name, closing, attributes } of the tag source "<…>" */
+	function parseTag(source) {
+		var i = 1;
+		var closing = source.charAt(1) === '/';
+		if (closing) {
+			i++;
+		}
+		var start = i;
+		while (i < source.length && !isSpace(source.charAt(i)) && source.charAt(i) !== '>' && source.charAt(i) !== '/') {
+			i++;
+		}
+		var tag = { name: source.slice(start, i).toLowerCase(), closing: closing, attributes: {} };
+		while (i < source.length) {
+			while (i < source.length && (isSpace(source.charAt(i)) || source.charAt(i) === '/')) {
+				i++;
+			}
+			if (i >= source.length || source.charAt(i) === '>') {
+				break;
+			}
+			start = i;
+			while (i < source.length && !isSpace(source.charAt(i)) && '=>/'.indexOf(source.charAt(i)) < 0) {
+				i++;
+			}
+			var name = source.slice(start, i).toLowerCase();
+			var value = '';
+			while (i < source.length && isSpace(source.charAt(i))) {
+				i++;
+			}
+			if (source.charAt(i) === '=') {
+				i++;
+				while (i < source.length && isSpace(source.charAt(i))) {
+					i++;
+				}
+				var quote = source.charAt(i);
+				if (quote === '"' || quote === '\'') {
+					var close = source.indexOf(quote, i + 1);
+					close = close < 0 ? source.length : close;
+					value = source.slice(i + 1, close);
+					i = close + 1;
+				} else {
+					start = i;
+					while (i < source.length && !isSpace(source.charAt(i)) && source.charAt(i) !== '>') {
+						i++;
+					}
+					value = source.slice(start, i);
+				}
+			}
+			if (name && !tag.attributes.hasOwnProperty(name)) {
+				tag.attributes[name] = decodeEntities(value);
+			}
+		}
+		return tag;
+	}
+
+	function normalizeText(text) {
+		return decodeEntities(text).replace(/\s+/g, ' ').trim();
+	}
+
+	/**
+	 * Tokens of an HTML string: { type: 'open' | 'close' | 'text', name,
+	 * attributes, text }. Comments and the doctype are dropped, whitespace is
+	 * collapsed (kept inside <pre>), entities are decoded.
+	 */
+	function tokenizeHtml(html) {
+		html = String(html || '');
+		var lower = null; // lower-case copy, made once when a raw text element needs it
+		var tokens = [];
+		var pre = 0;
+		var i = 0;
+		var pending = ''; // text is collected until the next tag, so "a < b" stays one text
+		function addText(text) {
+			pending += text;
+		}
+		function flushText() {
+			var value = pre ? decodeEntities(pending) : normalizeText(pending);
+			pending = '';
+			if (value) {
+				tokens.push({ type: 'text', text: value });
+			}
+		}
+		while (i < html.length) {
+			var lt = html.indexOf('<', i);
+			if (lt < 0) {
+				addText(html.slice(i));
+				break;
+			}
+			if (lt > i) {
+				addText(html.slice(i, lt));
+			}
+			if (html.slice(lt, lt + 4) === '<!--') {
+				var commentEnd = html.indexOf('-->', lt + 4);
+				i = commentEnd < 0 ? html.length : commentEnd + 3;
+				continue;
+			}
+			var next = html.charAt(lt + 1);
+			if (next !== '!' && next !== '?' && next !== '/' && !/[A-Za-z]/.test(next)) {
+				addText('<');
+				i = lt + 1;
+				continue;
+			}
+			var end = tagEnd(html, lt);
+			if (end < 0) {
+				addText(html.slice(lt));
+				break;
+			}
+			i = end;
+			if (next === '!' || next === '?') {
+				continue; // doctype, CDATA, processing instruction
+			}
+			flushText();
+			var tag = parseTag(html.slice(lt, end));
+			if (tag.closing) {
+				if (VOID_ELEMENTS.indexOf(tag.name) < 0) {
+					tokens.push({ type: 'close', name: tag.name });
+					if (tag.name === 'pre' && pre) {
+						pre--;
+					}
+				}
+				continue;
+			}
+			tokens.push({ type: 'open', name: tag.name, attributes: tag.attributes });
+			if (tag.name === 'pre') {
+				pre++;
+			}
+			if (RAW_TEXT_ELEMENTS.indexOf(tag.name) >= 0) {
+				lower = lower || html.toLowerCase();
+				var closeAt = lower.indexOf('</' + tag.name, i);
+				closeAt = closeAt < 0 ? html.length : closeAt;
+				var raw = html.slice(i, closeAt);
+				var text = tag.name === 'script' || tag.name === 'style' ? raw.replace(/\r\n?/g, '\n').trim() : normalizeText(raw);
+				if (text) {
+					tokens.push({ type: 'text', text: text });
+				}
+				var rawEnd = closeAt < html.length ? tagEnd(html, closeAt) : -1;
+				tokens.push({ type: 'close', name: tag.name });
+				i = rawEnd < 0 ? html.length : rawEnd;
+			}
+		}
+		flushText();
+		return tokens;
+	}
+
+	/** a token as text, attributes sorted, class names sorted */
+	function tokenText(token) {
+		if (token.type === 'text') {
+			return token.text;
+		}
+		if (token.type === 'close') {
+			return '</' + token.name + '>';
+		}
+		var attributes = Object.keys(token.attributes).sort().map(function (name) {
+			var value = token.attributes[name];
+			if (name === 'class') {
+				value = value.split(/\s+/).filter(Boolean).sort().join(' ');
+			}
+			return value === '' ? name : name + '="' + escapeHtml(value) + '"';
+		});
+		return '<' + token.name + (attributes.length ? ' ' + attributes.join(' ') : '') + '>';
+	}
+
+	/** lang, title, head tokens (without the title) and body tokens of a document or fragment */
+	function splitDocument(html) {
+		var tokens = tokenizeHtml(html);
+		var result = { lang: '', title: null, head: [], body: [] };
+		var part = 'body';
+		var hasBody = tokens.some(function (token) { return token.type === 'open' && token.name === 'body'; });
+		for (var i = 0; i < tokens.length; i++) {
+			var token = tokens[i];
+			var name = token.name;
+			if (token.type === 'open' && name === 'html') {
+				result.lang = token.attributes.lang || '';
+			} else if (name === 'html') {
+				continue;
+			} else if (token.type === 'open' && name === 'head') {
+				part = 'head';
+			} else if (token.type === 'close' && name === 'head') {
+				part = hasBody ? 'between' : 'body';
+			} else if (token.type === 'open' && name === 'body') {
+				part = 'body';
+			} else if (token.type === 'close' && name === 'body') {
+				part = 'after';
+			} else if (token.type === 'open' && name === 'title' && part !== 'body') {
+				var text = tokens[i + 1] && tokens[i + 1].type === 'text' ? tokens[i + 1].text : '';
+				result.title = text;
+				i += text ? 2 : 1;
+			} else if (part === 'head' || part === 'body') {
+				result[part].push(token);
+			}
+		}
+		return result;
+	}
+
+	/** parses "tag", "#id", ".class", "tag#id" or "tag.class" */
+	function parseSelector(selector) {
+		var match = /^([a-z][a-z0-9-]*)?(?:#([\w-]+)|\.([\w-]+))?$/i.exec(String(selector || '').trim());
+		return match && (match[1] || match[2] || match[3]) ? { name: (match[1] || '').toLowerCase(), id: match[2] || '', className: match[3] || '' } : null;
+	}
+
+	function matchesSelector(token, selector) {
+		if (token.type !== 'open' || (selector.name && token.name !== selector.name)) {
+			return false;
+		}
+		if (selector.id && token.attributes.id !== selector.id) {
+			return false;
+		}
+		return !selector.className || (' ' + (token.attributes['class'] || '').replace(/\s+/g, ' ') + ' ').indexOf(' ' + selector.className + ' ') >= 0;
+	}
+
+	/** the tokens inside the first element matching selector, or null */
+	function selectTokens(tokens, selector) {
+		for (var i = 0; i < tokens.length; i++) {
+			if (!matchesSelector(tokens[i], selector)) {
+				continue;
+			}
+			var name = tokens[i].name;
+			var depth = 0;
+			for (var j = i + 1; j < tokens.length; j++) {
+				if (tokens[j].name === name && tokens[j].type === 'open') {
+					depth++;
+				} else if (tokens[j].name === name && tokens[j].type === 'close') {
+					if (!depth) {
+						return tokens.slice(i + 1, j);
+					}
+					depth--;
+				}
+			}
+			return tokens.slice(i + 1);
+		}
+		return null;
+	}
+
+	function shorten(text) {
+		return text.length > 120 ? text.slice(0, 117) + '…' : text;
+	}
+
+	/** first difference of two token lists, with the path of open elements where it is */
+	function firstDifference(part, expected, actual) {
+		var path = [];
+		var length = Math.max(expected.length, actual.length);
+		for (var i = 0; i < length; i++) {
+			var a = expected[i] ? tokenText(expected[i]) : null;
+			var b = actual[i] ? tokenText(actual[i]) : null;
+			if (a !== b) {
+				return {
+					part: part,
+					path: path.join(' > '),
+					expected: a === null ? null : shorten(a),
+					actual: b === null ? null : shorten(b),
+				};
+			}
+			if (expected[i].type === 'open' && VOID_ELEMENTS.indexOf(expected[i].name) < 0) {
+				path.push(expected[i].name);
+			} else if (expected[i].type === 'close' && path[path.length - 1] === expected[i].name) {
+				path.pop();
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Compares two HTML documents (or fragments) by content: whitespace,
+	 * line endings, comments, attribute and class order and entity spelling
+	 * do not count. options.select ("main", "#id", ".class", "tag#id",
+	 * "tag.class") compares only the content of that element of the body.
+	 * Returns { same, differences: [{ part: 'lang' | 'title' | 'head' |
+	 * 'body', path, expected, actual }] } - one entry per differing part,
+	 * with the first difference in it.
+	 */
+	function compareHtml(expected, actual, options) {
+		options = options || {};
+		var a = splitDocument(expected);
+		var b = splitDocument(actual);
+		var differences = [];
+		if (a.lang !== b.lang) {
+			differences.push({ part: 'lang', path: '', expected: a.lang, actual: b.lang });
+		}
+		if ((a.title || '') !== (b.title || '')) {
+			differences.push({ part: 'title', path: '', expected: a.title, actual: b.title });
+		}
+		var head = firstDifference('head', a.head, b.head);
+		if (head) {
+			differences.push(head);
+		}
+		var bodyA = a.body;
+		var bodyB = b.body;
+		var selector = options.select ? parseSelector(options.select) : null;
+		if (options.select && !selector) {
+			throw new Error('markdown-pages-editor: unsupported selector "' + options.select + '"');
+		}
+		if (selector) {
+			// a generated document without that element counts as its content
+			bodyA = selectTokens(bodyA, selector) || bodyA;
+			bodyB = selectTokens(bodyB, selector);
+			if (!bodyB) {
+				differences.push({ part: 'body', path: '', expected: options.select, actual: null });
+				bodyA = null;
+			}
+		}
+		var body = bodyA && firstDifference('body', bodyA, bodyB);
+		if (body) {
+			differences.push(body);
+		}
+		return { same: !differences.length, differences: differences };
+	}
 	/**
 	 * Resolves the options to plain lists: toolbar items (command names and
 	 * "|"), commands by name, modes and the start mode. Pure, unit tested.
@@ -790,6 +1138,7 @@
 			download: download,
 			getHtml: getHtml,
 			saveHtml: saveHtml,
+			checkHtml: checkHtml,
 			focus: function () { input.focus(); },
 			destroy: destroy,
 		};
@@ -936,6 +1285,21 @@
 			});
 		}
 
+		/**
+		 * Compares an HTML file with what getHtml() gives for the current text.
+		 * checkOptions: fileName (for the title fallback), select (compare only
+		 * that element, e.g. "main"), expected (function (html) wrapping or
+		 * replacing the generated document, e.g. a site layout).
+		 */
+		function checkHtml(html, checkOptions) {
+			checkOptions = checkOptions || {};
+			return getHtml(checkOptions.fileName).then(function (generated) {
+				return typeof checkOptions.expected === 'function' ? checkOptions.expected(generated, input.value) : generated;
+			}).then(function (expected) {
+				return compareHtml(expected, html, { select: checkOptions.select });
+			});
+		}
+
 		function onToolbarClick(event) {
 			var node = event.target.closest('button');
 			if (!node || node.disabled) {
@@ -1074,6 +1438,7 @@
 	markdownPagesEditor.prefixIds = prefixIds;
 	markdownPagesEditor.documentTitle = documentTitle;
 	markdownPagesEditor.htmlDocument = htmlDocument;
+	markdownPagesEditor.compareHtml = compareHtml;
 	markdownPagesEditor.helpers = { wrap: wrap, prefixLines: prefixLines, editLines: editLines };
 	markdownPagesEditor.default = markdownPagesEditor;
 
