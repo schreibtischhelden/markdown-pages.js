@@ -47,13 +47,13 @@ markdown-pages.js turns a folder of Markdown files into a website – without a 
 
 ### Alternative: load from a CDN
 
-Every release is tagged (current: `v2.0.0`, see [Releases](https://github.com/schreibtischhelden/markdown-pages.js/releases)), so the files can also be loaded from jsDelivr instead of copying them. The libraries are then loaded from the same CDN folder:
+Every release is tagged (current: `v2.1.0`, see [Releases](https://github.com/schreibtischhelden/markdown-pages.js/releases)), so the files can also be loaded from jsDelivr instead of copying them. The libraries are then loaded from the same CDN folder:
 
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/assets/user-styles.css">
-<script src="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/markdown-pages.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.1.0/assets/user-styles.css">
+<script src="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.1.0/markdown-pages.js"></script>
 <!-- at the end of <body>: -->
-<script src="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.0.0/assets/user-scripts.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/schreibtischhelden/markdown-pages.js@v2.1.0/assets/user-scripts.js"></script>
 ```
 
 Always use a fixed version tag, never a branch. With a Content Security Policy, allow the CDN: `script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net`. Your Markdown files, `menu.json` etc. are still loaded from your own site.
