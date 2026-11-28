@@ -112,7 +112,7 @@ Publish the project as described in [Deployment](?page=deployment) – with an e
 | Clone a project including the submodule | `git clone --recurse-submodules <url>` |
 | Fetch the submodule after a plain clone or pull | `git submodule update --init` |
 | Update manually to the latest `main` | `git submodule update --remote lib/markdown-pages` |
-| Pin to a release | `git -C lib/markdown-pages checkout v2.0.0`, then commit |
+| Pin to a release | `git -C lib/markdown-pages checkout v2.1.0`, then commit |
 
 The project always uses exactly the commit recorded in it – an update only happens when a pull request (or a manual update) is merged.
 
@@ -125,5 +125,5 @@ The theme of this site can be used as well: load `lib/markdown-pages/assets/docs
 | Way | Updates |
 | :--- | :--- |
 | Git submodule (above) | Dependabot pull request for every new commit on `main` |
-| CDN with a fixed version (`…@v2.0.0`, see [Quick start](?page=quick-start#alternative-load-from-a-cdn)) | Manual – change the version in `index.html` |
+| CDN with a fixed version (`…@v2.1.0`, see [Quick start](?page=quick-start#alternative-load-from-a-cdn)) | Manual – change the version in `index.html` |
 | Copy of the files | Manual – copy again |
