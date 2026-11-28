@@ -39,3 +39,25 @@ Aliquet bibendum enim facilisis gravida neque convallis a cras. Cras semper auct
 - Nec dui nunc mattis enim.
 
 
+
+## Extended syntax {#extended-syntax}
+
+Elements of the [extended syntax](https://markdownguide.offshoot.io/extended-syntax/) – see [Writing pages](?page=writing-pages#markdown-syntax).
+
+- [x] Task lists like on GitHub
+- [ ] ~~Strikethrough~~, ==highlighted== text, H~2~O and E = mc^2^
+- [ ] Emoji :tada:
+
+Markdown pages are rendered in the browser[^browser], so a simple web server is enough[^server].
+
+Showdown
+: Converts Markdown to HTML.
+
+DOMPurify
+: Removes scripts and event handlers.
+: Runs after every conversion.
+
+[^browser]: The Markdown files are loaded with `fetch()` and converted by Showdown.
+[^server]: GitHub Pages, for example – see [Deployment](?page=deployment).
+
+    Notes can have several paragraphs when they are indented.
