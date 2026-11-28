@@ -161,32 +161,150 @@
 		return { from: from, to: to, text: text, start: from + 4, end: from + 4 + body.length };
 	}
 
+	/** image: like link, with "!" and alt text */
+	function image(state) {
+		var selected = state.value.slice(state.start, state.end);
+		if (/^(https?:\/\/|\.\/|\/)\S*$/.test(selected)) {
+			return { from: state.start, to: state.end, text: '![alt text](' + selected + ')', start: state.start + 2, end: state.start + 10 };
+		}
+		var alt = selected || 'alt text';
+		var urlStart = state.start + alt.length + 4;
+		return { from: state.start, to: state.end, text: '![' + alt + '](https://)', start: urlStart, end: urlStart + 8 };
+	}
+
+	/** fenced code block around the selected lines, or removes the fences if they are already there */
+	function codeBlock(state) {
+		var range = selectedLines(state);
+		var lines = range.lines;
+		if (lines.length >= 2 && /^ {0,3}```/.test(lines[0]) && /^ {0,3}```\s*$/.test(lines[lines.length - 1])) {
+			var inner = lines.slice(1, -1).join('\n');
+			return { from: range.from, to: range.to, text: inner, start: range.from, end: range.from + inner.length };
+		}
+		var body = state.start === state.end && !lines.join('').trim() ? 'code' : lines.join('\n');
+		var text = '```\n' + body + '\n```';
+		return { from: range.from, to: range.to, text: text, start: range.from + 4, end: range.from + 4 + body.length };
+	}
+
+	/** inserts a block after the line of the cursor, separated by a blank line; selects [selectFrom, selectTo) of block */
+	function insertBlock(state, block, selectFrom, selectTo) {
+		var at = lineEnd(state.value, state.end);
+		var before = at > 0 ? (state.value.slice(lineStart(state.value, at), at).trim() ? '\n\n' : '\n') : '';
+		var text = before + block + '\n';
+		var offset = at + before.length;
+		return { from: at, to: at, text: text, start: offset + selectFrom, end: offset + selectTo };
+	}
+
 	/** horizontal rule after the line of the cursor */
 	function rule(state) {
-		var at = lineEnd(state.value, state.end);
-		var text = (at > 0 ? '\n\n' : '') + '---\n';
-		return { from: at, to: at, text: text, start: at + text.length, end: at + text.length };
+		var edit = insertBlock(state, '---', 0, 0);
+		edit.start = edit.end = edit.from + edit.text.length;
+		return edit;
 	}
 
 	/**
-	 * Built-in commands. text: visible button text, label: accessible name
-	 * (see LABELS), shortcut: key with Ctrl/Cmd.
+	 * Table. Selected lines become rows (cells split at tabs, as pasted from
+	 * a spreadsheet, or at "|"); otherwise a 2x2 template is inserted.
+	 */
+	function table(state) {
+		var range = selectedLines(state);
+		var rows = state.start === state.end ? [] : range.lines.filter(function (line) {
+			return line.trim();
+		}).map(function (line) {
+			return (line.indexOf('\t') >= 0 ? line.split('\t') : line.replace(/^\s*\|/, '').replace(/\|\s*$/, '').split('|')).map(function (cell) {
+				return cell.trim();
+			});
+		});
+		if (!rows.length) {
+			var template = '| Column 1 | Column 2 |\n| --- | --- |\n| Text | Text |';
+			return insertBlock(state, template, 2, 10);
+		}
+		var columns = rows.reduce(function (max, row) { return Math.max(max, row.length); }, 1);
+		var line = function (cells) {
+			var all = cells.slice();
+			while (all.length < columns) {
+				all.push('');
+			}
+			return '| ' + all.join(' | ') + ' |';
+		};
+		var separator = [];
+		while (separator.length < columns) {
+			separator.push('---');
+		}
+		var lines = [line(rows[0]), line(separator)];
+		rows.slice(1).forEach(function (row) {
+			lines.push(line(row));
+		});
+		var text = lines.join('\n');
+		return { from: range.from, to: range.to, text: text, start: range.from, end: range.from + text.length };
+	}
+
+	/** footnote reference at the cursor and the note at the end of the text, with the next free number */
+	function footnote(state) {
+		var value = state.value;
+		var number = 1;
+		while (value.indexOf('[^' + number + ']') >= 0) {
+			number++;
+		}
+		var ref = '[^' + number + ']';
+		var selected = value.slice(state.start, state.end);
+		var note = ref + ': ' + (selected || 'footnote text');
+		var tail = value.slice(state.end);
+		// right after existing notes, otherwise after a blank line
+		var notesAtEnd = /(^|\n)\[\^[^\]\n]+\]:[^\n]*\n?$/.test(value);
+		var separator = /\n\n$/.test(value) ? '' : /\n$/.test(value) ? (notesAtEnd ? '' : '\n') : (notesAtEnd ? '\n' : '\n\n');
+		// one edit from the cursor to the end keeps undo in one step
+		var text = ref + tail + separator + note + '\n';
+		var noteStart = state.start + ref.length + tail.length + separator.length + ref.length + 2;
+		return { from: state.start, to: value.length, text: text, start: noteStart, end: noteStart + (selected || 'footnote text').length };
+	}
+
+	/**
+	 * 16x16 outline icons: [tag, attributes] per shape, drawn with
+	 * stroke="currentColor". Used for the mode buttons and commands with
+	 * an icon.
+	 */
+	var ICONS = {
+		write: [['path', { d: 'M2.5 13.5l.8-3.2L10.8 2.8a1.4 1.4 0 0 1 2 0l.4.4a1.4 1.4 0 0 1 0 2l-7.5 7.5z' }], ['path', { d: 'M9.5 4l2.5 2.5' }]],
+		split: [['rect', { x: '1.5', y: '2.5', width: '13', height: '11', rx: '1.5' }], ['path', { d: 'M8 2.5v11' }]],
+		preview: [['path', { d: 'M1 8s2.6-4.5 7-4.5S15 8 15 8s-2.6 4.5-7 4.5S1 8 1 8z' }], ['circle', { cx: '8', cy: '8', r: '2' }]],
+		link: [['path', { d: 'M6.8 9.2a2.8 2.8 0 0 0 4 0l2.2-2.2a2.8 2.8 0 0 0-4-4l-.9.9' }], ['path', { d: 'M9.2 6.8a2.8 2.8 0 0 0-4 0L3 9a2.8 2.8 0 0 0 4 4l.9-.9' }]],
+		image: [['rect', { x: '1.5', y: '2.5', width: '13', height: '11', rx: '1.5' }], ['circle', { cx: '5.5', cy: '6', r: '1.2' }], ['path', { d: 'M14.5 10.5l-3.5-3.5-7 6.5' }]],
+		code: [['path', { d: 'M5.5 4.5L2 8l3.5 3.5' }], ['path', { d: 'M10.5 4.5L14 8l-3.5 3.5' }]],
+		codeBlock: [['rect', { x: '1.5', y: '2.5', width: '13', height: '11', rx: '1.5' }], ['path', { d: 'M6.5 6L4.5 8l2 2' }], ['path', { d: 'M9.5 6l2 2-2 2' }]],
+		table: [['rect', { x: '1.5', y: '2.5', width: '13', height: '11', rx: '1.5' }], ['path', { d: 'M1.5 6.2h13M1.5 9.8h13M8 6.2v7.3' }]],
+		tasks: [['rect', { x: '1.5', y: '2', width: '5', height: '5', rx: '1' }], ['path', { d: 'M2.8 4.5l1 1 1.7-2' }], ['rect', { x: '1.5', y: '9', width: '5', height: '5', rx: '1' }], ['path', { d: 'M9 4.5h5.5M9 11.5h5.5' }]],
+		help: [['circle', { cx: '8', cy: '8', r: '6.5' }], ['path', { d: 'M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.4' }], ['path', { d: 'M8 11.6v.1' }]],
+	};
+
+	/**
+	 * Built-in commands. text: visible button text, icon: shapes from ICONS
+	 * (shown instead of the text unless icons are switched off), label:
+	 * accessible name (see LABELS), shortcut: key with Ctrl/Cmd.
 	 */
 	var COMMANDS = {
 		bold: { text: 'B', shortcut: 'b', run: function (state) { return wrap(state, '**', '**', 'bold text'); } },
 		italic: { text: 'I', shortcut: 'i', run: function (state) { return wrap(state, '_', '_', 'italic text'); } },
 		strikethrough: { text: 'S', run: function (state) { return wrap(state, '~~', '~~', 'text'); } },
 		heading: { text: 'H', run: heading },
-		link: { text: 'Link', shortcut: 'k', run: link },
-		code: { text: '</>', run: code },
+		link: { text: 'Link', icon: ICONS.link, shortcut: 'k', run: link },
+		image: { text: 'Img', icon: ICONS.image, run: image },
+		code: { text: '</>', icon: ICONS.code, run: code },
+		codeBlock: { text: '{ }', icon: ICONS.codeBlock, run: codeBlock },
 		quote: { text: '“', run: function (state) { return prefixLines(state, '> '); } },
 		list: { text: '•', run: function (state) { return prefixLines(state, '- '); } },
 		numbered: { text: '1.', run: numberedList },
-		tasks: { text: '☐', run: function (state) { return prefixLines(state, '- [ ] '); } },
+		tasks: { text: '☐', icon: ICONS.tasks, run: function (state) { return prefixLines(state, '- [ ] '); } },
+		table: { text: 'Tbl', icon: ICONS.table, run: table },
 		rule: { text: '—', run: rule },
+		// extended syntax that not every renderer supports - not in the default toolbar
+		highlight: { text: 'M', run: function (state) { return wrap(state, '==', '==', 'text'); } },
+		subscript: { text: 'x₂', run: function (state) { return wrap(state, '~', '~', 'text'); } },
+		superscript: { text: 'x²', run: function (state) { return wrap(state, '^', '^', 'text'); } },
+		footnote: { text: '¹', run: footnote },
+		definition: { text: 'DL', run: function (state) { return prefixLines(state, ': '); } },
 	};
 
-	var DEFAULT_TOOLBAR = ['bold', 'italic', 'heading', '|', 'link', 'code', '|', 'quote', 'list', 'numbered'];
+	var DEFAULT_TOOLBAR = ['bold', 'italic', 'strikethrough', 'heading', '|', 'link', 'image', 'code', 'codeBlock', '|', 'quote', 'list', 'numbered', 'tasks', 'table'];
 	var MODES = ['write', 'split', 'preview'];
 
 	var LABELS = {
@@ -196,18 +314,29 @@
 		strikethrough: 'Strikethrough',
 		heading: 'Heading',
 		link: 'Link',
+		image: 'Image',
 		code: 'Code',
+		codeBlock: 'Code block',
 		quote: 'Quote',
 		list: 'Bulleted list',
 		numbered: 'Numbered list',
 		tasks: 'Task list',
+		table: 'Table',
 		rule: 'Horizontal rule',
+		highlight: 'Highlight',
+		subscript: 'Subscript',
+		superscript: 'Superscript',
+		footnote: 'Footnote',
+		definition: 'Definition',
 		write: 'Write',
 		preview: 'Preview',
 		split: 'Side by side',
 		download: 'Download',
-		input: 'Markdown',
+		downloadMarkdown: 'Markdown (.md)',
+		downloadHtml: 'HTML (.html)',
+		input:'Markdown',
 		empty: 'Nothing to preview yet.',
+		help: 'Markdown help',
 	};
 
 	/** applies an edit to a plain string */
@@ -215,14 +344,134 @@
 		return value.slice(0, edit.from) + edit.text + value.slice(edit.to);
 	}
 
-	/** file name for downloads: no folders, no characters that are invalid on common systems, ends in .md */
-	function safeFileName(name) {
+	/**
+	 * File name for downloads: no folders, no characters that are invalid on
+	 * common systems, ends in .md (or .markdown). With format "html" it ends
+	 * in .html (or .htm); a .md / .markdown extension is replaced.
+	 */
+	function safeFileName(name, format) {
+		var html = format === 'html';
 		var base = String(name || '').split(/[\\/]/).pop().replace(/[\u0000-\u001f<>:"|?*]+/g, '').trim();
 		base = base.replace(/^\.+/, '');
+		if (html) {
+			base = base.replace(/\.(md|markdown)$/i, '');
+		}
 		if (!base) {
-			base = 'document.md';
+			base = 'document';
+		}
+		if (html) {
+			return /\.html?$/i.test(base) ? base : base + '.html';
 		}
 		return /\.(md|markdown)$/i.test(base) ? base : base + '.md';
+	}
+
+	function escapeHtml(text) {
+		return String(text).replace(/[&<>"']/g, function (char) {
+			return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;' }[char];
+		});
+	}
+
+	/**
+	 * Text of the first level 1 heading ("# Title" or "Title" + "===") outside
+	 * code blocks, without inline Markdown marks; "" if there is none.
+	 */
+	function documentTitle(markdown) {
+		var lines = String(markdown || '').split(/\r?\n/);
+		var fence = null;
+		for (var i = 0; i < lines.length; i++) {
+			var line = lines[i];
+			var marker = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+			if (fence) {
+				if (marker && marker[1].charAt(0) === fence.charAt(0) && marker[1].length >= fence.length) {
+					fence = null;
+				}
+				continue;
+			}
+			if (marker) {
+				fence = marker[1];
+				continue;
+			}
+			var text = null;
+			if (/^ {0,3}#([ \t]|$)/.test(line)) {
+				text = atxText(line);
+			} else if (/^ {0,3}=+[ \t]*$/.test(lines[i + 1] || '') && /\S/.test(line) && !/^( {4}|\t)/.test(line)) {
+				text = line;
+			}
+			if (text !== null) {
+				text = stripLinks(text)
+					.replace(/(\*\*|__|\*|_|~~|`)([^*_~`]+)\1/g, '$2')
+					.replace(/\s+/g, ' ')
+					.trim();
+				if (text) {
+					return text;
+				}
+			}
+		}
+		return '';
+	}
+
+	// the helpers below avoid regular expressions with nested repetition, so
+	// long lines cannot make them slow (ReDoS)
+
+	function trimEnd(text) {
+		var end = text.length;
+		while (end > 0 && /\s/.test(text.charAt(end - 1))) {
+			end--;
+		}
+		return text.slice(0, end);
+	}
+
+	/** text of an ATX heading line: without the leading "#" and an optional closing "#" sequence */
+	function atxText(line) {
+		var text = trimEnd(line.slice(line.indexOf('#') + 1));
+		var end = text.length;
+		while (end > 0 && text.charAt(end - 1) === '#') {
+			end--;
+		}
+		// closing hashes count only after a space (or if the heading is empty)
+		if (end < text.length && (end === 0 || /[ \t]/.test(text.charAt(end - 1)))) {
+			text = text.slice(0, end);
+		}
+		return text.trim();
+	}
+
+	/** "[text](url)" and "![alt](url)" become their text */
+	function stripLinks(text) {
+		var out = '';
+		var index = 0;
+		while (index < text.length) {
+			var open = text.indexOf('[', index);
+			var close = open < 0 ? -1 : text.indexOf(']', open + 1);
+			var end = close < 0 || text.charAt(close + 1) !== '(' ? -1 : text.indexOf(')', close + 2);
+			if (end < 0) {
+				return out + text.slice(index);
+			}
+			var start = open > index && text.charAt(open - 1) === '!' ? open - 1 : open;
+			out += text.slice(index, start) + text.slice(open + 1, close);
+			index = end + 1;
+		}
+		return out;
+	}
+
+	/**
+	 * Wraps rendered HTML in a complete document. options: title, lang and
+	 * head (extra HTML for <head>, inserted as is, e.g. a stylesheet link).
+	 */
+	function htmlDocument(body, options) {
+		options = options || {};
+		var lang = String(options.lang || '').replace(/[^A-Za-z0-9-]/g, '');
+		return '<!doctype html>\n' +
+			'<html' + (lang ? ' lang="' + lang + '"' : '') + '>\n' +
+			'<head>\n' +
+			'<meta charset="utf-8">\n' +
+			'<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+			'<title>' + escapeHtml(options.title || 'Document') + '</title>\n' +
+			(options.head ? trimEnd(String(options.head)) + '\n' : '') +
+			'</head>\n' +
+			'<body>\n' +
+			trimEnd(String(body || '')) + '\n' +
+			'</body>\n' +
+			'</html>\n';
 	}
 
 	/**
@@ -272,8 +521,19 @@
 			modes: modes,
 			mode: mode,
 			download: Boolean(options.fileName) && options.download !== false,
+			saveHtml: Boolean(options.fileName) && preview && options.saveHtml === true,
 			shortcuts: options.shortcuts !== false,
+			icons: options.icons !== false,
+			helpUrl: options.helpUrl === false ? null : safeHelpUrl(options.helpUrl === undefined ? HELP_URL : options.helpUrl),
 		};
+	}
+
+	var HELP_URL = 'https://markdownguide.offshoot.io/';
+
+	/** only http(s) and relative URLs, so the link can never run script */
+	function safeHelpUrl(url) {
+		url = String(url || '').trim();
+		return url && /^(https?:\/\/|\/|\.{0,2}\/|\?|#)|^[^:]*$/i.test(url) ? url : null;
 	}
 
 	// ---------------------------------------------------------------------
@@ -291,6 +551,23 @@
 			node.setAttribute(name, attributes[name]);
 		});
 		return node;
+	}
+
+	function icon(shapes) {
+		var ns = 'http://www.w3.org/2000/svg';
+		var svg = document.createElementNS(ns, 'svg');
+		var attributes = { viewBox: '0 0 16 16', width: '16', height: '16', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.4', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true', focusable: 'false', 'class': 'markdown-pages-editor-icon' };
+		Object.keys(attributes).forEach(function (name) {
+			svg.setAttribute(name, attributes[name]);
+		});
+		shapes.forEach(function (shape) {
+			var node = document.createElementNS(ns, shape[0]);
+			Object.keys(shape[1]).forEach(function (name) {
+				node.setAttribute(name, shape[1][name]);
+			});
+			svg.appendChild(node);
+		});
+		return svg;
 	}
 
 	function button(className, text, label) {
@@ -393,29 +670,78 @@
 				return;
 			}
 			var command = config.commands[name];
-			var node = button('markdown-pages-editor-button markdown-pages-editor-' + name, command.text || labels[name], labels[name]);
+			var withIcon = config.icons && Array.isArray(command.icon);
+			var node = button('markdown-pages-editor-button markdown-pages-editor-' + name, withIcon ? '' : command.text || labels[name], labels[name]);
+			if (withIcon) {
+				node.appendChild(icon(command.icon));
+			}
 			node.setAttribute('data-command', name);
 			format.appendChild(node);
 		});
 		if (config.toolbar.length) {
 			toolbar.appendChild(format);
 		}
+		if (config.helpUrl) {
+			var help = element('a', 'markdown-pages-editor-help', { href: config.helpUrl, target: '_blank', rel: 'noopener noreferrer', title: labels.help, 'aria-label': labels.help });
+			if (config.icons) {
+				help.appendChild(icon(ICONS.help));
+			} else {
+				help.textContent = labels.help;
+			}
+			toolbar.appendChild(help);
+		}
 
 		var modeButtons = {};
 		if (config.modes.length > 1) {
 			var switcher = element('div', 'markdown-pages-editor-modes');
 			config.modes.forEach(function (name) {
-				var node = button('markdown-pages-editor-mode', labels[name]);
+				var node;
+				if (config.icons) {
+					node = button('markdown-pages-editor-mode', '', labels[name]);
+					node.appendChild(icon(ICONS[name]));
+				} else {
+					node = button('markdown-pages-editor-mode', labels[name]);
+				}
 				node.setAttribute('data-mode', name);
 				modeButtons[name] = node;
 				switcher.appendChild(node);
 			});
 			toolbar.appendChild(switcher);
 		}
-		var downloadButton = null;
+		// one format: a plain button; two: a menu button with a ▾ arrow
+		var formats = [];
 		if (config.download) {
+			formats.push('markdown');
+		}
+		if (config.saveHtml) {
+			formats.push('html');
+		}
+		var downloadButton = null;
+		var downloadGroup = null;
+		var downloadMenu = null;
+		if (formats.length === 1) {
 			downloadButton = button('markdown-pages-editor-download', labels.download);
+			downloadButton.setAttribute('data-format', formats[0]);
 			toolbar.appendChild(downloadButton);
+		} else if (formats.length > 1) {
+			downloadGroup = element('div', 'markdown-pages-editor-download-group');
+			downloadButton = button('markdown-pages-editor-download', labels.download);
+			downloadButton.appendChild(element('span', 'markdown-pages-editor-arrow', { 'aria-hidden': 'true' })).textContent = '▾';
+			downloadButton.setAttribute('aria-haspopup', 'menu');
+			downloadButton.setAttribute('aria-expanded', 'false');
+			downloadButton.setAttribute('aria-controls', id + '-download-menu');
+			downloadMenu = element('div', 'markdown-pages-editor-download-menu', { role: 'menu', id: id + '-download-menu', 'aria-label': labels.download });
+			downloadMenu.hidden = true;
+			formats.forEach(function (format) {
+				var item = button('markdown-pages-editor-download-item', labels[format === 'html' ? 'downloadHtml' : 'downloadMarkdown']);
+				item.setAttribute('role', 'menuitem');
+				item.setAttribute('tabindex', '-1');
+				item.setAttribute('data-format', format);
+				downloadMenu.appendChild(item);
+			});
+			downloadGroup.appendChild(downloadButton);
+			downloadGroup.appendChild(downloadMenu);
+			toolbar.appendChild(downloadGroup);
 		}
 
 		var panes = element('div', 'markdown-pages-editor-panes');
@@ -462,6 +788,8 @@
 			render: renderPreview,
 			exec: exec,
 			download: download,
+			getHtml: getHtml,
+			saveHtml: saveHtml,
 			focus: function () { input.focus(); },
 			destroy: destroy,
 		};
@@ -564,14 +892,48 @@
 			input.setSelectionRange(edit.start, edit.end);
 		}
 
-		function download(name) {
-			var blob = new Blob([input.value], { type: 'text/markdown;charset=utf-8' });
+		function saveFile(content, type, fileName) {
+			var blob = new Blob([content], { type: type + ';charset=utf-8' });
 			var url = URL.createObjectURL(blob);
-			var anchor = element('a', '', { href: url, download: safeFileName(name || options.fileName) });
+			var anchor = element('a', '', { href: url, download: fileName });
 			document.body.appendChild(anchor);
 			anchor.click();
 			anchor.remove();
 			setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+		}
+
+		function download(name) {
+			saveFile(input.value, 'text/markdown', safeFileName(name || options.fileName));
+		}
+
+		/**
+		 * The text as a complete HTML document, rendered with the render
+		 * function into a detached element (afterRender and prefixIds do not
+		 * apply, so ids and links stay as written).
+		 */
+		function getHtml(name) {
+			if (typeof options.render !== 'function') {
+				return Promise.reject(new Error('markdown-pages-editor: saving HTML needs a render function'));
+			}
+			var markdown = input.value;
+			var container = element('div');
+			return Promise.resolve().then(function () {
+				return options.render(markdown, container);
+			}).then(function (html) {
+				var fileName = safeFileName(name || options.fileName, 'html');
+				var head = typeof options.htmlHead === 'function' ? options.htmlHead(markdown, api) : options.htmlHead;
+				return htmlDocument(typeof html === 'string' ? html : container.innerHTML, {
+					title: documentTitle(markdown) || fileName.replace(/\.html?$/i, ''),
+					lang: options.htmlLang !== undefined ? options.htmlLang : document.documentElement.lang,
+					head: head,
+				});
+			});
+		}
+
+		function saveHtml(name) {
+			return getHtml(name).then(function (html) {
+				saveFile(html, 'text/html', safeFileName(name || options.fileName, 'html'));
+			});
 		}
 
 		function onToolbarClick(event) {
@@ -583,8 +945,71 @@
 				exec(node.getAttribute('data-command'));
 			} else if (node.hasAttribute('data-mode')) {
 				setMode(node.getAttribute('data-mode'));
-			} else if (node === downloadButton) {
-				download();
+			} else if (node === downloadButton && downloadMenu) {
+				toggleMenu(downloadMenu.hidden);
+			} else if (node.hasAttribute('data-format')) {
+				if (downloadMenu) {
+					toggleMenu(false, true);
+				}
+				if (node.getAttribute('data-format') === 'html') {
+					saveHtml().catch(function (error) {
+						console.error('markdown-pages-editor:', error);
+					});
+				} else {
+					download();
+				}
+			}
+		}
+
+		function menuItems() {
+			return Array.prototype.slice.call(downloadMenu.querySelectorAll('[role="menuitem"]'));
+		}
+
+		/** opens or closes the download menu; focusItem: index of the item to focus, true: focus the button */
+		function toggleMenu(open, focusItem) {
+			downloadMenu.hidden = !open;
+			downloadButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+			if (open) {
+				document.addEventListener('click', onDocumentClick, true);
+				menuItems()[typeof focusItem === 'number' ? focusItem : 0].focus();
+			} else {
+				document.removeEventListener('click', onDocumentClick, true);
+				if (focusItem === true) {
+					downloadButton.focus();
+				}
+			}
+		}
+
+		function onDocumentClick(event) {
+			if (!downloadGroup.contains(event.target)) {
+				toggleMenu(false);
+			}
+		}
+
+		function onMenuKeyDown(event) {
+			var items = menuItems();
+			var index = items.indexOf(document.activeElement);
+			if (event.target === downloadButton) {
+				if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+					event.preventDefault();
+					toggleMenu(true, event.key === 'ArrowUp' ? items.length - 1 : 0);
+				} else if (event.key === 'Escape' && !downloadMenu.hidden) {
+					event.preventDefault();
+					toggleMenu(false, true);
+				}
+				return;
+			}
+			if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+				event.preventDefault();
+				items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length].focus();
+			} else if (event.key === 'Home' || event.key === 'End') {
+				event.preventDefault();
+				items[event.key === 'Home' ? 0 : items.length - 1].focus();
+			} else if (event.key === 'Escape') {
+				event.preventDefault();
+				toggleMenu(false, true);
+			} else if (event.key === 'Tab') {
+				toggleMenu(false);
 			}
 		}
 
@@ -617,10 +1042,14 @@
 		input.addEventListener('keydown', onKeyDown);
 		preview.addEventListener('click', onPreviewClick);
 		preview.addEventListener('submit', onPreviewSubmit);
+		if (downloadGroup) {
+			downloadGroup.addEventListener('keydown', onMenuKeyDown);
+		}
 
 		function destroy() {
 			clearTimeout(timer);
 			renderCount++;
+			document.removeEventListener('click', onDocumentClick, true);
 			input.removeEventListener('input', changed);
 			input.removeEventListener('keydown', onKeyDown);
 			if (isTextarea) {
@@ -637,11 +1066,14 @@
 
 	markdownPagesEditor.commands = COMMANDS;
 	markdownPagesEditor.labels = LABELS;
+	markdownPagesEditor.icons = ICONS;
 	markdownPagesEditor.defaultToolbar = DEFAULT_TOOLBAR;
 	markdownPagesEditor.resolveOptions = resolveOptions;
 	markdownPagesEditor.applyEdit = applyEdit;
 	markdownPagesEditor.safeFileName = safeFileName;
 	markdownPagesEditor.prefixIds = prefixIds;
+	markdownPagesEditor.documentTitle = documentTitle;
+	markdownPagesEditor.htmlDocument = htmlDocument;
 	markdownPagesEditor.helpers = { wrap: wrap, prefixLines: prefixLines, editLines: editLines };
 	markdownPagesEditor.default = markdownPagesEditor;
 

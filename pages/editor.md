@@ -2,7 +2,7 @@
 
 markdown-pages.js can show a lightweight Markdown editor: a text field with a configurable toolbar and a live preview. The editor is the package [@schreibtischhelden/markdown-pages-editor](https://github.com/schreibtischhelden/markdown-pages-editor) (vendored in `assets/vendor/markdown-pages-editor/`). `MarkdownPages.editor()` connects it to the site, so the preview is rendered exactly like a page – Showdown with the same options, DOMPurify, [forms](?page=forms) and [menu placeholders](?page=menu).
 
-Nothing is sent anywhere: the text can be downloaded as a `.md` file or read with `getValue()`. Use it for tools that produce Markdown in the browser, e.g. a configuration UI that lets people write the pages of their site.
+Nothing is sent anywhere: the text can be downloaded as a `.md` file or, rendered, as an `.html` file, or read with `getValue()`. Use it for tools that produce Markdown in the browser, e.g. a configuration UI that lets people write the pages of their site.
 
 ## Example
 
@@ -44,17 +44,18 @@ MarkdownPages.editorOptions = {
 
 | Option | Default | Description |
 | :--- | :--- | :--- |
-| `toolbar` | `bold`, `italic`, `heading`, `link`, `code`, `quote`, `list`, `numbered` | Buttons in this order, `'\|'` is a separator, `false` for none. Also available: `strikethrough`, `tasks`, `rule` |
+| `toolbar` | `bold`, `italic`, `strikethrough`, `heading`, `link`, `image`, `code`, `codeBlock`, `quote`, `list`, `numbered`, `tasks`, `table` | Buttons in this order, `'\|'` is a separator, `false` for none. Also available: `rule`, and for extended syntax `highlight`, `subscript`, `superscript`, `footnote`, `definition` |
 | `commands` | – | Own commands for the toolbar |
 | `modes`, `mode` | all, `'split'` | `'write'`, `'split'` (side by side), `'preview'`; one mode hides the switcher |
 | `fileName`, `download` | – | File name for the *Download* button; `download: false` hides it |
+| `saveHtml`, `htmlHead`, `htmlLang` | – | `saveHtml: true` adds *HTML (.html)* to the *Download* menu: the page rendered as a complete document; `htmlHead` adds to its `<head>`, e.g. a stylesheet link |
 | `storageKey` | – | Keeps an unsaved draft in `localStorage` |
 | `shortcuts` | `true` | <kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>B</kbd>, <kbd>I</kbd>, <kbd>K</kbd> for the buttons in the toolbar |
 | `labels` | English | Button texts |
 | `onChange`, `afterRender` | – | Callbacks |
 | `render` | site renderer | Only set it to use a different renderer |
 
-The returned object has `getValue()`, `setValue()`, `isDirty()`, `markSaved()`, `download()`, `setMode()`, `render()`, `exec()`, `focus()` and `destroy()` – see the [package documentation](https://github.com/schreibtischhelden/markdown-pages-editor#methods).
+The returned object has `getValue()`, `setValue()`, `isDirty()`, `markSaved()`, `download()`, `saveHtml()`, `getHtml()`, `setMode()`, `render()`, `exec()`, `focus()` and `destroy()` – see the [package documentation](https://github.com/schreibtischhelden/markdown-pages-editor#methods).
 
 ## Preview
 
